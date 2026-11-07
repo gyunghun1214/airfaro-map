@@ -132,7 +132,7 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
 </style>
 </head>
 <body>
-<div class="banner example wrap" id="banner">예시 데이터예요 · 가상의 센서 6곳을 컴퓨터가 흉내 낸 값이라 실제 측정이 아니에요</div>
+<div class="banner example wrap" id="banner">예시 데이터예요. 가상의 센서 6곳 값을 컴퓨터로 흉내 낸 것이라 실제 측정값이 아니에요.</div>
 <header class="top wrap">
   <h1 class="logo">AIRFARO <b>MAP</b></h1>
   <span class="campus" id="campusName">동국대학교 서울캠퍼스 (시범)</span>
@@ -142,17 +142,17 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
 <main class="grid wrap">
   <div class="mapbox" id="mapbox">
     <div class="mapbar">
-      <span class="hint">끌어서 옮기고, 오른쪽 버튼이나 Ctrl+끌기로 돌려요(휴대폰은 두 손가락). 휠이나 두 손가락으로 확대해요. 기둥 = 공기 변화를 재는 <b>센서 위치</b>예요. 흡연한 사람의 위치가 아니에요.</span>
+      <span class="hint">끌어서 옮기고, 오른쪽 버튼이나 Ctrl을 누른 채 끌면 돌아가요. 확대는 휠로 해요. 휴대폰에서는 두 손가락으로 돌리거나 벌려요. 기둥은 공기 변화를 재는 <b>센서 위치</b>이고, 흡연한 사람의 위치가 아니에요.</span>
       <button id="btnHome" type="button">기본 보기</button>
       <button id="btnTop" type="button">위에서 보기</button>
       <button id="btnSpin" type="button">천천히 돌기</button>
-      <button id="btnStudents" type="button" aria-pressed="false" title="길을 걷는 학생 캐릭터(꾸밈용)를 켜고 꺼요">학생 캐릭터</button>
-      <button id="btnEdit" type="button">핀 위치 옮기기</button>
+      <button id="btnStudents" type="button" aria-pressed="false" title="길을 걷는 꾸밈용 학생 캐릭터를 켜고 꺼요">학생 캐릭터</button>
+      <button id="btnEdit" type="button">센서 위치 옮기기</button>
       <button id="btnSwitch" type="button" hidden>예시로 보기</button>
     </div>
     <div class="view3d" id="view3d"></div>
     <div class="editbar" id="editbar" hidden>
-      <span>기둥을 끌어서 실제로 설치한 곳에 놓으세요. 가장 가까운 건물(30m 안)이 그 센서의 구역이 돼요.</span>
+      <span>기둥을 끌어서 실제로 설치한 곳에 놓으세요. 30m 안에서 가장 가까운 건물과 이어져요.</span>
       <span style="flex:1"></span>
       <button id="btnSave" type="button" class="on">위치 저장</button>
       <button id="btnCopy" type="button">위치 JSON 보기</button>
@@ -160,7 +160,7 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
       <span class="small" id="editMsg" role="status"></span>
     </div>
     <div class="editbar" id="jsonbox" hidden><textarea id="jsonText" readonly aria-label="sites.json에 붙여 넣을 위치"></textarea></div>
-    <div class="mapfoot"><span id="attrib">건물·길 © OpenStreetMap 기여자 (ODbL) · 고도 AWS Terrain Tiles (SRTM 기반)</span><span>건물 모양은 지도 자료로 만든 모형이라 실제 사진과 달라요</span><span id="npcNote">걷는 학생은 꾸밈용 가상 캐릭터예요 · 실제 사람의 위치가 아니에요</span></div>
+    <div class="mapfoot"><span id="attrib">건물·길 © OpenStreetMap 기여자 (ODbL) · 고도 AWS Terrain Tiles (SRTM 기반)</span><span>건물 모양은 지도 자료로 만든 모형이라 실제 사진과 달라요</span><span id="npcNote">걷는 학생은 꾸밈용 가상 캐릭터이고, 실제 사람의 위치가 아니에요</span></div>
   </div>
 
   <div class="side">
@@ -170,9 +170,9 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
     </section>
     <section class="card" id="detail" aria-live="polite"></section>
     <section class="card" aria-labelledby="h-ev">
-      <h2 id="h-ev">바뀐 기록 (최근)</h2>
+      <h2 id="h-ev">최근 바뀐 기록</h2>
       <ul class="events" id="events"></ul>
-      <p class="small" id="csvRow" hidden style="margin:8px 0 0"><a id="csvLink" href="api/export.csv" download>오늘 받은 값 CSV로 받기</a><span id="csvNote"> · 서버 폴더 data/ 에도 날짜별로 쌓여요</span></p>
+      <p class="small" id="csvRow" hidden style="margin:8px 0 0"><a id="csvLink" href="api/export.csv" download>오늘 받은 값을 CSV로 내려받기</a><span id="csvNote"> (서버의 data/ 폴더에도 날짜별로 쌓여요)</span></p>
     </section>
   </div>
 </main>
@@ -180,27 +180,27 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
   <section class="card">
     <h2>색이 뜻하는 것</h2>
     <div class="legend" id="legend"></div>
-    <p class="small" style="margin:8px 0 0">흡연 의심 · 판단 보류 · 공기 변화일 때는 센서 바닥 원과 이어진 건물이 같은 색으로 바뀌고, 이름표가 깜빡여요.</p>
+    <p class="small" style="margin:8px 0 0">흡연 의심, 판단 보류, 공기 변화일 때는 센서 바닥의 원과 이어진 건물이 같은 색으로 바뀌고 이름표가 깜빡여요.</p>
   </section>
   <section class="card">
     <h2>이 지도를 읽을 때</h2>
     <ul class="notes">
-      <li>판단 규칙은 장치 · 수집 페이지와 같은 초기 시험 값이에요: 평소보다 먼지 +50mV 이상, 가스 +40 이상이 함께 10초 넘게 이어지면 '흡연 의심'. 담배 연기로 검증한 기준이 아니고, 실물 검증 전이에요.</li>
-      <li>먼지 값은 센서 출력 전압(mV)이고, 가스 값은 0~1023 숫자예요. 니코틴 양 · 확률 · 정확한 미세먼지(PM2.5) 농도가 아니에요.</li>
+      <li>판단 규칙은 장치와 수집 페이지에 넣은 초기 시험값과 같아요. 평소보다 먼지가 50mV, 가스가 40 이상 함께 오른 채 10초 넘게 이어지면 흡연 의심으로 봐요. 담배 연기로 검증한 기준은 아니고, 아직 실물 검증 전이에요.</li>
+      <li>먼지 값은 센서 출력 전압(mV)이고, 가스 값은 0~1023 사이 숫자예요. 니코틴 양이나 확률, 정확한 미세먼지(PM2.5) 농도가 아니에요.</li>
       <li>30초 넘게 값이 안 오면 회색 '수신 없음'으로 바꿔요. 값이 없을 때 초록으로 두지 않아요.</li>
-      <li>장치를 켜거나 다시 연결하면 4분(예열 3분 + 평소 재기 1분) 동안 '기준 측정 전'이에요.</li>
-      <li>대운동장은 실제처럼 평평한 축구장으로, 정각원 · 종각은 기와지붕 전통 건물로 그린 모형이에요. 둘레 땅 높이는 모형에 맞춰 고른 값이라 실제와 조금 달라요.</li>
-      <li>지도 위를 걷는 학생은 화면을 꾸미는 가상 캐릭터예요. 실제 사람의 위치가 아니고, 냄새를 잰 것도 아니에요. '흡연 의심' 센서 둘레에 들어가면 "아 담배 냄새!" 하고 코를 막고 피해 가서 판단 결과를 눈에 띄게 보여 줄 뿐이에요 (판단 보류 · 공기 변화에는 반응하지 않아요). 지도 위 '학생 캐릭터' 단추로 끌 수 있어요.</li>
+      <li>장치를 켜거나 다시 연결하면 4분 동안 '기준 측정 전'이에요. 3분은 가스 센서 예열, 1분은 평소 공기를 재는 시간이에요.</li>
+      <li>대운동장은 실제처럼 평평한 축구장으로, 정각원과 종각은 기와지붕 전통 건물로 그린 모형이에요. 둘레 땅 높이는 모형에 맞춰 고른 값이라 실제와 조금 달라요.</li>
+      <li>지도 위를 걷는 학생은 화면을 꾸미는 가상 캐릭터라서 실제 사람의 위치도, 냄새를 잰 값도 아니에요. 흡연 의심 센서 둘레에 들어가면 "아 담배 냄새!" 하며 코를 막고 피해 가요. 판단 보류나 공기 변화에는 반응하지 않고, 지도 위 '학생 캐릭터' 단추로 끌 수 있어요.</li>
     </ul>
   </section>
   <section class="card">
     <h2>실제 장치로 보려면</h2>
     <div class="howto">
-      <div>1) 노트북에서 이 폴더를 열고 <code>node server.js</code> 를 켜요.</div>
-      <div>2) Chrome으로 <code>http://localhost:8080/collector</code> 를 열고, 서버 주소 칸에 <code>http://localhost:8080/api/readings</code> 를 넣은 뒤 지점 ID(예: site-01)를 정하고 장치를 연결해요.</div>
-      <div>3) 지도는 <code>http://localhost:8080/</code> 에서 5초마다 새로 읽어요. 같은 와이파이의 휴대폰은 서버 창에 나온 주소로 열어요.</div>
+      <div>1) 노트북에서 이 폴더를 열고 <code>node server.js</code>를 켜요.</div>
+      <div>2) Chrome으로 <code>http://localhost:8080/collector</code>를 열고 서버 주소 칸에 <code>http://localhost:8080/api/readings</code>를 넣은 뒤, 지점 ID(예: site-01)를 정하고 장치를 연결해요.</div>
+      <div>3) 지도는 <code>http://localhost:8080/</code>에서 5초마다 새 값을 읽어요. 같은 와이파이에 연결한 휴대폰에서는 서버 창에 나온 주소로 열어요.</div>
     </div>
-    <p class="small" id="staticNote" hidden style="margin:8px 0 0">지금 보는 페이지는 서버 없이 올린 미리 보기라 예시 모드만 보여요. 실제 값은 위 순서로 켠 지도에서 보여요.</p>
+    <p class="small" id="staticNote" hidden style="margin:8px 0 0">지금 보는 페이지는 서버 없이 올린 미리 보기라 예시 모드만 나와요. 실제 값은 위 순서로 켠 지도에서 볼 수 있어요.</p>
   </section>
 </div>
 <script src="vendor/three.min.js"></script>
@@ -235,9 +235,9 @@ const DEFAULT_SITES = [
 const HEX = { NONE: '#adb5bd', WAIT: '#868e96', CALM: '#2f9e44', CHANGED: '#e0a800', HOLD: '#7048e8', SMOKE: '#e03131', FAULT: '#495057', NODATA: '#adb5bd' };
 const LIGHT_TEXT = { CHANGED: 1, NODATA: 1, NONE: 1 };   // 밝은 바탕이라 글자를 어둡게
 const MEANING = {
-  CALM: '먼지 · 가스가 평소 값 근처예요.', CHANGED: '한 가지 값만 올랐거나 아직 10초가 안 됐어요.',
-  SMOKE: '먼지와 가스가 함께 오른 채 10초 넘게 이어졌어요.', HOLD: '함께 올랐지만 습도도 1분 안에 8%p 넘게 올라 수증기일 수 있어요.',
-  WAIT: '켠 뒤 4분 동안 예열하고 평소 공기를 재요.', NODATA: '30초 넘게 값이 오지 않았어요.', FAULT: '값이 센서 끝에 붙어 있어요. 선과 전원을 확인해요.',
+  CALM: '먼지와 가스가 평소 값 근처예요.', CHANGED: '한 가지 값만 올랐거나 아직 10초가 안 됐어요.',
+  SMOKE: '먼지와 가스가 함께 오른 채 10초 넘게 이어졌어요.', HOLD: '먼지와 가스가 함께 올랐지만 습도도 1분 안에 8%p 넘게 올라서 수증기일 수 있어요.',
+  WAIT: '켠 뒤 4분 동안 예열하고 평소 공기를 재요.', NODATA: '30초 넘게 값이 오지 않았어요.', FAULT: '값이 측정 범위 끝에 붙어 있어요. 선과 전원을 확인하세요.',
 };
 const ORDER = ['SMOKE', 'HOLD', 'CHANGED', 'FAULT', 'NODATA', 'WAIT', 'CALM'];
 const $ = (id) => document.getElementById(id);
@@ -245,6 +245,8 @@ const kstTime = (ms) => new Date(ms + 9 * 3600e3).toISOString().slice(11, 19);
 const sign = (v) => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const chipCls = (s) => (LIGHT_TEXT[s] ? ' light' : '');
+// 조사 고르기: 받침이 있으면 a, 없으면 b (이/가, 과/와). 한글로 끝나지 않으면 a
+const josa = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 === 0 ? b : a; };
 function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } return null; }
 
 // ---------------------------------------------------------------- 예시 데이터 (가상의 센서 6곳)
@@ -385,8 +387,8 @@ function setMode(m) {
   const b = $('banner'), chip = $('modeChip');
   b.className = 'banner wrap ' + m; chip.className = 'modechip ' + m;
   b.textContent = m === 'real'
-    ? '실제 관측 · 이 서버가 받은 값이에요 · 실물 검증 전 시범이에요'
-    : '예시 데이터예요 · 가상의 센서 6곳을 컴퓨터가 흉내 낸 값이라 실제 측정이 아니에요';
+    ? '이 서버가 받은 실제 관측값이에요. 아직 실물 검증 전인 시범이에요.'
+    : '예시 데이터예요. 가상의 센서 6곳 값을 컴퓨터로 흉내 낸 것이라 실제 측정값이 아니에요.';
   chip.textContent = m === 'real' ? '실제 관측' : '예시 모드';
   $('btnSwitch').hidden = !serverOk;
   $('csvRow').hidden = m !== 'real';
@@ -436,7 +438,7 @@ function startMap() {
     const list = mode === 'real' && serverSites ? serverSites : null;
     if (list) { const c = list.find((s) => s.id === id); if (c) Object.assign(c, { x, z, zone }); }
     else { localPos = localPos || {}; localPos[id] = { x, z, zone }; }
-    $('editMsg').textContent = `옮겼어요. ${zoneName ? '이어진 건물: ' + zoneName : '30m 안에 건물이 없어 바닥 원만 색이 바뀌어요'}. 저장을 눌러야 남아요.`;
+    $('editMsg').textContent = `옮겼어요. ${zoneName ? zoneName + josa(zoneName, '과', '와') + ' 이어져요' : '30m 안에 건물이 없어서 바닥 원만 색이 바뀌어요'}. 저장을 눌러야 남아요.`;
     refresh();
   };
   map.setSites(sitesConfig());
@@ -491,11 +493,11 @@ function drawList(st) {
 
 function whyText(L) {
   if (L.never) return mode === 'real' ? '이 지점 ID로 받은 값이 아직 없어요. 수집 페이지의 지점 ID와 서버 주소를 확인하세요.' : '값이 없어요.';
-  if (L.state === 'NODATA') return `마지막 값이 온 지 ${L.age_s}초가 지났어요. 노트북 · USB 케이블 · 장치 전원 · 수집 페이지 탭을 확인하세요.`;
-  if (L.state === 'WAIT') { const left = L.wait_left_s ?? RULE.WAIT_S; return `가스 센서 예열과 평소 공기 재기를 기다려요. 남은 시간 약 ${Math.floor(left / 60)}분 ${left % 60}초.`; }
+  if (L.state === 'NODATA') return `마지막 값이 온 지 ${L.age_s}초가 지났어요. 노트북, USB 케이블, 장치 전원, 수집 페이지 탭을 확인하세요.`;
+  if (L.state === 'WAIT') { const left = L.wait_left_s ?? RULE.WAIT_S; return `가스 센서를 예열하고 평소 공기를 재는 중이에요. 약 ${Math.floor(left / 60)}분 ${left % 60}초 남았어요.`; }
   if (L.state === 'FAULT') return MEANING.FAULT;
-  return `평소 먼지 ${L.base_dust}mV · 가스 ${L.base_gas} / 기준 +${L.th_dust} · +${L.th_gas}<br>지금 차이 먼지 ${sign(L.d_dust)} · 가스 ${sign(L.d_gas)}` +
-    (L.high_dust ? ` · 먼지 높음 ${L.n_dust}줄` : '') + (L.high_gas ? ` · 가스 높음 ${L.n_gas}줄` : '') + (L.hum_jump ? ' · 습도 급변' : '') +
+  return `평소 먼지 ${L.base_dust}mV, 가스 ${L.base_gas}. 기준은 평소보다 먼지 +${L.th_dust}, 가스 +${L.th_gas} 이상이에요.<br>지금 차이는 먼지 ${sign(L.d_dust)}, 가스 ${sign(L.d_gas)}` +
+    (L.high_dust ? `, 먼지 높음 ${L.n_dust}줄` : '') + (L.high_gas ? `, 가스 높음 ${L.n_gas}줄` : '') + (L.hum_jump ? ', 습도 급변' : '') +
     `<br>${MEANING[L.state] || ''}`;
 }
 
@@ -519,7 +521,7 @@ function spark(hist, idx, base, th, label) {
   const ref = base != null && th != null
     ? `<line x1="${P}" x2="${W - P}" y1="${Y(base).toFixed(1)}" y2="${Y(base).toFixed(1)}" stroke="var(--muted)" stroke-dasharray="3 3" stroke-width="1" vector-effect="non-scaling-stroke"/>` +
       `<line x1="${P}" x2="${W - P}" y1="${Y(base + th).toFixed(1)}" y2="${Y(base + th).toFixed(1)}" stroke="var(--s-smoke)" stroke-dasharray="5 3" stroke-width="1" opacity=".75" vector-effect="non-scaling-stroke"/>` : '';
-  return `<div class="chart-l"><span>${label} · 최근 10분</span><span>${base != null ? `회색 점선 평소 ${base} · 빨간 점선 기준 +${th}` : ''}</span></div>` +
+  return `<div class="chart-l"><span>${label} · 최근 10분</span><span>${base != null ? `회색 점선 평소 ${base}, 빨간 점선 기준 +${th}` : ''}</span></div>` +
     `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${label} 최근 10분 그래프">${bands}${ref}` +
     `<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.8" vector-effect="non-scaling-stroke"/>` +
     `<circle cx="${X(last[0]).toFixed(1)}" cy="${Y(last[idx]).toFixed(1)}" r="3" fill="var(--accent)"/></svg>`;
@@ -536,12 +538,12 @@ function drawDetail(st) {
     <div class="detail-head"><h3>${esc(s.name)}</h3><span class="id">${esc(s.id)}</span>
       <span class="bigstate${chipCls(L.state)}" style="background:${HEX[L.state]}">${STATES[L.state][0]}</span></div>
     <div class="small">${esc(s.place || '')}${L.never ? '' : ` · 마지막 수신 ${kstTime(L.last_at)}${mode === 'example' ? ' (예시 시각)' : ''} · 받은 줄 ${L.n_rx}`}</div>
-    <p class="zone">${zone && zone.name ? `이어진 건물: <b>${esc(zone.name)}</b> · 흡연 의심이면 이 건물이 빨갛게 바뀌어요` : zone ? '이어진 건물: 이름 없는 건물' : '이어진 건물 없음 · 바닥 원만 색이 바뀌어요'}</p>
+    <p class="zone">${zone && zone.name ? `흡연 의심이면 이어진 건물 <b>${esc(zone.name)}</b>${josa(zone.name, '이', '가')} 빨갛게 바뀌어요.` : zone ? '흡연 의심이면 이어진 건물(이름 없음)이 빨갛게 바뀌어요.' : '이어진 건물이 없어서 바닥 원만 색이 바뀌어요.'}</p>
     <p class="why">${whyText(L)}</p>
     <div class="vals">
       <div class="v"><span>먼지 센서 출력</span><b>${L.never ? '-' : L.dust}</b><em>mV${run ? ' · 평소보다 ' + sign(L.d_dust) : ''}</em></div>
       <div class="v"><span>가스 센서 값</span><b>${L.never ? '-' : L.gas}</b><em>0~1023${run ? ' · ' + sign(L.d_gas) : ''}</em></div>
-      <div class="v"><span>습도</span><b>${L.never ? '-' : L.humidity === null ? '없음' : L.humidity}</b><em>${L.humidity === null && !L.never ? '센서 없음 (null)' : '%'}</em></div>
+      <div class="v"><span>습도</span><b>${L.never ? '-' : L.humidity === null ? '없음' : L.humidity}</b><em>${L.humidity === null && !L.never ? '센서 없음' : '%'}</em></div>
     </div>
     <div class="charts">${spark(L.history, 1, run ? L.base_dust : null, L.th_dust, '먼지 mV')}${spark(L.history, 2, run ? L.base_gas : null, L.th_gas, '가스')}</div>`;
 }
@@ -563,7 +565,7 @@ function drawLegend() {
   const box = $('legend');
   for (const k of ['CALM', 'CHANGED', 'SMOKE', 'HOLD', 'WAIT', 'NODATA', 'FAULT']) {
     const d = document.createElement('div');
-    d.innerHTML = `<i style="background:${HEX[k]}"></i><span><b>${STATES[k][0]}</b> · ${MEANING[k]}</span>`;
+    d.innerHTML = `<i style="background:${HEX[k]}"></i><span><b>${STATES[k][0]}</b>&ensp;${MEANING[k]}</span>`;
     box.appendChild(d);
   }
 }
@@ -580,7 +582,7 @@ function setEditing(on) {
   if (map) map.setEditing(on);
   $('editbar').hidden = !on; $('jsonbox').hidden = true;
   $('btnEdit').classList.toggle('on', on);
-  $('btnEdit').textContent = on ? '옮기기 끝내기' : '핀 위치 옮기기';
+  $('btnEdit').textContent = on ? '옮기기 끝내기' : '센서 위치 옮기기';
   $('btnSave').textContent = mode === 'real' ? '서버에 위치 저장' : '이 브라우저에 저장';
   $('editMsg').textContent = '';
 }
@@ -630,7 +632,7 @@ function init() {
   if ($('csvLink')) $('csvLink').href = API + 'export.csv';
   if (SB) {   // 공개 지도: 핀 위치는 노트북의 server.js 화면에서 옮겨 sites.json 으로 관리해요
     $('btnEdit').hidden = true;
-    if ($('csvNote')) $('csvNote').textContent = ' · 공개 서버(Supabase)에 쌓여요';
+    if ($('csvNote')) $('csvNote').textContent = ' (공개 서버 Supabase에 쌓여요)';
   }
   if (!NO_SERVER) { pollServer(); setInterval(pollServer, POLL_MS); }
   setInterval(() => { if (mode === 'real' && lastReal) refresh(); }, 1000);
