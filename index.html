@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AIRFARO MAP 동국대</title>
+<meta name="airfaro-api" content="https://xzxmimurhrbicfmzaezp.supabase.co/functions/v1/airfaro/">
+<meta name="airfaro-supabase" content="https://xzxmimurhrbicfmzaezp.supabase.co">
+<meta name="airfaro-key" content="sb_publishable_eKQsFknSwLoZiX5I_lDoKw_08HpGcfC">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* 레이아웃: 왼쪽은 동국대 3D 캠퍼스 모형(등대처럼 센서 자리를 비춰요), 오른쪽은 지점 목록 · 선택한 지점 · 바뀐 기록. 휴대폰에서는 위아래로 쌓여요. */
+:root {
+  --bg: #eef2f3; --panel: #ffffff; --ink: #14232e; --muted: #5a6973; --line: #d5dee2;
+  --accent: #116a86; --accent-soft: #e1f0f4;
+  --s-wait: #868e96; --s-calm: #2f9e44; --s-changed: #e0a800; --s-hold: #7048e8; --s-smoke: #e03131;
+  --s-fault: #495057; --s-nodata: #adb5bd;
+  --example: #c2410c; --example-soft: #fff1e6; --real: #2b8a3e; --real-soft: #ebfbee;
+  --f-body: "IBM Plex Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans CJK KR", sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0b151c; --panel: #13222b; --ink: #e3ecef; --muted: #96a8b1; --line: #243843;
+  --accent: #5cc3df; --accent-soft: #163845;
+  --example: #ff9a5c; --example-soft: #3a2414; --real: #69db7c; --real-soft: #15301d;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0b151c; --panel: #13222b; --ink: #e3ecef; --muted: #96a8b1; --line: #243843;
+  --accent: #5cc3df; --accent-soft: #163845;
+  --example: #ff9a5c; --example-soft: #3a2414; --real: #69db7c; --real-soft: #15301d;
+  color-scheme: dark; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14.5px; line-height: 1.5; }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.banner { padding-block: 7px; text-align: center; font-weight: 700; font-size: 13.5px; }
+.banner.example { background: var(--example-soft); color: var(--example); }
+.banner.real { background: var(--real-soft); color: var(--real); }
+header.top { padding-block: 14px 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.logo { font-weight: 700; font-size: 23px; letter-spacing: .03em; margin: 0; }
+.logo b { color: var(--accent); }
+.campus { color: var(--muted); font-weight: 500; }
+.modechip { margin-left: auto; font-size: 12.5px; font-weight: 700; padding: 3px 11px; border-radius: 999px; }
+.modechip.example { background: var(--example-soft); color: var(--example); }
+.modechip.real { background: var(--real-soft); color: var(--real); }
+.summary { display: flex; flex-wrap: wrap; gap: 6px; padding-block: 0 10px; }
+.sum { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 3px 10px 3px 8px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); }
+.sum i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.sum b { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+main.grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); gap: 14px; padding-block: 0 20px; align-items: start; }
+@media (max-width: 960px) { main.grid { grid-template-columns: minmax(0, 1fr); } }
+.mapbox { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-width: 0; }
+.mapbar { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.mapbar .hint { font-size: 12.5px; color: var(--muted); flex: 1 1 260px; min-width: 0; }
+.view3d { position: relative; height: clamp(380px, 64vh, 760px); background: var(--bg); }
+@media (max-width: 640px) { .view3d { height: 64vh; min-height: 360px; } }
+.mapfoot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 6px 10px; font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line); }
+.nogl { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); }
+.side { display: grid; gap: 14px; min-width: 0; }
+section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+.card h2 { font-size: 12.5px; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; font-weight: 700; }
+button { font: inherit; font-size: 13px; font-weight: 700; padding: 6px 11px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button:focus-visible, .site-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.on { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.list { display: grid; gap: 4px; }
+.site-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+.site-row:hover { background: var(--accent-soft); }
+.site-row.sel { border-color: var(--accent); background: var(--accent-soft); }
+.num { width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; color: #fff; font-family: var(--f-num); font-size: 12px; font-weight: 600; }
+.site-row .nm { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.site-row .nm small { font-weight: 400; color: var(--muted); font-family: var(--f-num); margin-left: 5px; }
+.chip { font-size: 12px; font-weight: 700; color: #fff; padding: 2px 9px; border-radius: 6px; white-space: nowrap; }
+.chip.light { color: #1b1b1b; }
+.detail-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.detail-head h3 { margin: 0; font-size: 18px; }
+.detail-head .id { font-family: var(--f-num); color: var(--muted); font-size: 12.5px; }
+.bigstate { font-size: 19px; font-weight: 700; color: #fff; padding: 3px 14px; border-radius: 8px; }
+.bigstate.light { color: #1b1b1b; }
+.why { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+.zone { font-size: 12.5px; margin: 6px 0 0; color: var(--ink); }
+.vals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.v { background: var(--bg); border-radius: 8px; padding: 7px 9px; min-width: 0; }
+.v span { display: block; color: var(--muted); font-size: 11.5px; }
+.v b { display: block; font-family: var(--f-num); font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1.25; }
+.v em { font-style: normal; font-size: 11.5px; color: var(--muted); font-family: var(--f-num); }
+.charts { display: grid; gap: 6px; margin-top: 10px; }
+.chart-l { font-size: 11.5px; color: var(--muted); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; }
+svg.spark { display: block; width: 100%; height: 64px; }
+.events { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 12.5px; max-height: 230px; overflow-y: auto; }
+.events li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
+.events time { font-family: var(--f-num); color: var(--muted); font-variant-numeric: tabular-nums; }
+.legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px 14px; font-size: 12.5px; }
+.legend div { display: flex; gap: 7px; align-items: flex-start; }
+.legend i { flex: none; width: 11px; height: 11px; border-radius: 50%; margin-top: 4px; }
+.notes { font-size: 12.5px; color: var(--muted); margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.howto { font-size: 12.5px; color: var(--muted); display: grid; gap: 6px; }
+.howto code { font-family: var(--f-num); font-size: 12px; background: var(--bg); padding: 1px 5px; border-radius: 4px; color: var(--ink); word-break: break-all; }
+.small { font-size: 12px; color: var(--muted); }
+.editbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; border-top: 1px solid var(--line); background: var(--accent-soft); font-size: 12.5px; }
+textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height: 110px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.bottom { padding-block: 0 32px; display: grid; gap: 14px; }
+/* 3D 위의 이름표 */
+.m3-wrap { position: absolute; inset: 0; overflow: hidden; }
+.m3-wrap canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+.m3-labels { position: absolute; inset: 0; pointer-events: none; }
+.m3-bl { position: absolute; left: 0; top: 0; padding: 1px 7px; border-radius: 5px; background: rgba(17, 25, 31, .84); color: #fff;
+         font: 700 12px/1.6 var(--f-body); white-space: nowrap; border: 1px solid rgba(255, 255, 255, .5); will-change: transform; }
+.m3-bl.m3-place { background: rgba(255, 255, 255, .88); color: #20323c; border-color: rgba(0, 0, 0, .15); }
+.m3-sl { position: absolute; left: 0; top: 0; pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 2px 2px;
+         border-radius: 999px; background: var(--panel); border: 2px solid var(--c); color: var(--ink); font: 700 12.5px/1.5 var(--f-body);
+         white-space: nowrap; cursor: pointer; box-shadow: 0 2px 8px rgba(0, 0, 0, .28); will-change: transform; }
+.m3-sl b { background: var(--c); color: #fff; border-radius: 50%; width: 21px; height: 21px; display: inline-grid; place-items: center; font: 600 11.5px var(--f-num); }
+.m3-sl i { font-style: normal; font-weight: 700; color: var(--muted); }
+.m3-sl.alert i { color: var(--c); filter: saturate(1.2) brightness(.9); }
+.m3-sl.sel { box-shadow: 0 0 0 3px var(--ink), 0 2px 8px rgba(0, 0, 0, .28); }
+.m3-sl.alert { animation: beacon 1.6s ease-out infinite; }
+@keyframes beacon { 0% { box-shadow: 0 0 0 0 var(--c), 0 2px 8px rgba(0, 0, 0, .28); } 100% { box-shadow: 0 0 0 14px transparent, 0 2px 8px rgba(0, 0, 0, .28); } }
+@media (prefers-reduced-motion: reduce) { .m3-sl.alert { animation: none; } }
+.m3-edit canvas { cursor: crosshair; }
+</style>
+</head>
+<body>
+<div class="banner example wrap" id="banner">예시 데이터예요 · 가상의 센서 6곳을 컴퓨터가 흉내 낸 값이라 실제 측정이 아니에요</div>
+<header class="top wrap">
+  <h1 class="logo">AIRFARO <b>MAP</b></h1>
+  <span class="campus" id="campusName">동국대학교 서울캠퍼스 (시범)</span>
+  <span class="modechip example" id="modeChip">예시 모드</span>
+</header>
+<div class="summary wrap" id="summary"></div>
+<main class="grid wrap">
+  <div class="mapbox" id="mapbox">
+    <div class="mapbar">
+      <span class="hint">끌어서 돌리고, 두 손가락이나 휠로 확대해요. 기둥 = 공기 변화를 재는 <b>센서 위치</b>예요. 흡연한 사람의 위치가 아니에요.</span>
+      <button id="btnHome" type="button">기본 보기</button>
+      <button id="btnTop" type="button">위에서 보기</button>
+      <button id="btnSpin" type="button">천천히 돌기</button>
+      <button id="btnEdit" type="button">핀 위치 옮기기</button>
+      <button id="btnSwitch" type="button" hidden>예시로 보기</button>
+    </div>
+    <div class="view3d" id="view3d"></div>
+    <div class="editbar" id="editbar" hidden>
+      <span>기둥을 끌어서 실제로 설치한 곳에 놓으세요. 가장 가까운 건물(30m 안)이 그 센서의 구역이 돼요.</span>
+      <span style="flex:1"></span>
+      <button id="btnSave" type="button" class="on">위치 저장</button>
+      <button id="btnCopy" type="button">위치 JSON 보기</button>
+      <button id="btnReset" type="button">처음 위치로</button>
+      <span class="small" id="editMsg" role="status"></span>
+    </div>
+    <div class="editbar" id="jsonbox" hidden><textarea id="jsonText" readonly aria-label="sites.json에 붙여 넣을 위치"></textarea></div>
+    <div class="mapfoot"><span id="attrib">건물·길 © OpenStreetMap 기여자 (ODbL) · 고도 AWS Terrain Tiles (SRTM 기반)</span><span>건물 모양은 지도 자료로 만든 모형이라 실제 사진과 달라요</span></div>
+  </div>
+
+  <div class="side">
+    <section class="card" aria-labelledby="h-sites">
+      <h2 id="h-sites">센서 지점</h2>
+      <div class="list" id="list"></div>
+    </section>
+    <section class="card" id="detail" aria-live="polite"></section>
+    <section class="card" aria-labelledby="h-ev">
+      <h2 id="h-ev">바뀐 기록 (최근)</h2>
+      <ul class="events" id="events"></ul>
+      <p class="small" id="csvRow" hidden style="margin:8px 0 0"><a id="csvLink" href="api/export.csv" download>오늘 받은 값 CSV로 받기</a><span id="csvNote"> · 서버 폴더 data/ 에도 날짜별로 쌓여요</span></p>
+    </section>
+  </div>
+</main>
+<div class="wrap bottom">
+  <section class="card">
+    <h2>색이 뜻하는 것</h2>
+    <div class="legend" id="legend"></div>
+    <p class="small" style="margin:8px 0 0">흡연 의심 · 판단 보류 · 공기 변화일 때는 센서 바닥 원과 이어진 건물이 같은 색으로 바뀌고, 이름표가 깜빡여요.</p>
+  </section>
+  <section class="card">
+    <h2>이 지도를 읽을 때</h2>
+    <ul class="notes">
+      <li>판단 규칙은 장치 · 수집 페이지와 같은 초기 시험 값이에요: 평소보다 먼지 +50mV 이상, 가스 +40 이상이 함께 10초 넘게 이어지면 '흡연 의심'. 담배 연기로 검증한 기준이 아니고, 실물 검증 전이에요.</li>
+      <li>먼지 값은 센서 출력 전압(mV)이고, 가스 값은 0~1023 숫자예요. 니코틴 양 · 확률 · 정확한 미세먼지(PM2.5) 농도가 아니에요.</li>
+      <li>30초 넘게 값이 안 오면 회색 '수신 없음'으로 바꿔요. 값이 없을 때 초록으로 두지 않아요.</li>
+      <li>장치를 켜거나 다시 연결하면 4분(예열 3분 + 평소 재기 1분) 동안 '기준 측정 전'이에요.</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>실제 장치로 보려면</h2>
+    <div class="howto">
+      <div>1) 노트북에서 이 폴더를 열고 <code>node server.js</code> 를 켜요.</div>
+      <div>2) Chrome으로 <code>http://localhost:8080/collector</code> 를 열고, 서버 주소 칸에 <code>http://localhost:8080/api/readings</code> 를 넣은 뒤 지점 ID(예: site-01)를 정하고 장치를 연결해요.</div>
+      <div>3) 지도는 <code>http://localhost:8080/</code> 에서 5초마다 새로 읽어요. 같은 와이파이의 휴대폰은 서버 창에 나온 주소로 열어요.</div>
+    </div>
+    <p class="small" id="staticNote" hidden style="margin:8px 0 0">지금 보는 페이지는 서버 없이 올린 미리 보기라 예시 모드만 보여요. 실제 값은 위 순서로 켠 지도에서 보여요.</p>
+  </section>
+</div>
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="judge.js"></script>
+<script src="campus-data.js"></script>
+<script src="map3d.js"></script>
+<script>
+'use strict';
+// AIRFARO MAP 지도 화면 (index.html)
+// 서버(server.js)가 있으면 api/status 를 5초마다 읽어 실제 관측을 보여 주고, 없으면 예시 데이터만 보여 줘요.
+// 실제와 예시는 화면 · 저장 · 기록에서 섞지 않아요.
+const { RULE, STATES } = window.AirfaroJudge;
+const POLL_MS = 5000;
+// 서버 주소: 같은 폴더의 server.js 면 'api/', 다른 곳(공개 서버)이면 <meta name="airfaro-api" content="https://.../"> 로 정해요
+const API = ((document.querySelector('meta[name="airfaro-api"]') || {}).content || 'api/').replace(/\/?$/, '/');
+// 서버 없이 올린 사본(미리 보기, 정적 호스팅)은 <meta name="airfaro-static" content="1"> 로 서버 읽기를 꺼요
+const NO_SERVER = location.protocol === 'file:' && !document.querySelector('meta[name="airfaro-api"]') ||
+  !!document.querySelector('meta[name="airfaro-static"][content="1"]');
+// 공개 서버(Supabase)에 올린 사본은 함수를 부르지 않고 데이터베이스의 읽기 함수 airfaro_snapshot() 을 바로 읽어요
+//   <meta name="airfaro-supabase" content="https://<프로젝트>.supabase.co">  <meta name="airfaro-key" content="sb_publishable_…(공개용 열쇠)">
+const SB = ((document.querySelector('meta[name="airfaro-supabase"]') || {}).content || '').replace(/\/+$/, '');
+const SB_KEY = (document.querySelector('meta[name="airfaro-key"]') || {}).content || '';
+const DEFAULT_SITES = [
+  { id: 'site-01', name: '신공학관 옆', place: '건물 동쪽 출입구 옆 · 예시 지점', x: -166.9, z: 13.3, zone: 'w268231941' },
+  { id: 'site-02', name: '원흥관 뒤', place: '정보문화관 쪽 통로 · 예시 지점', x: -170.6, z: -107.6, zone: 'w270032663' },
+  { id: 'site-03', name: '대운동장 스탠드 옆', place: '운동장 동쪽 끝 · 예시 지점', x: 58, z: 196, zone: null },
+  { id: 'site-04', name: '상록원 옆', place: '식당 동쪽 통로 · 예시 지점', x: -64.9, z: 140.2, zone: 'w270031929' },
+  { id: 'site-05', name: '혜화관 앞', place: '건물 북쪽 입구 옆 · 예시 지점', x: 96.6, z: 43.1, zone: 'w268782778' },
+  { id: 'site-06', name: '학생회관 앞', place: '건물 북쪽 · 예시 지점', x: -188.2, z: -219.8, zone: 'w270032386' },
+];
+const HEX = { NONE: '#adb5bd', WAIT: '#868e96', CALM: '#2f9e44', CHANGED: '#e0a800', HOLD: '#7048e8', SMOKE: '#e03131', FAULT: '#495057', NODATA: '#adb5bd' };
+const LIGHT_TEXT = { CHANGED: 1, NODATA: 1, NONE: 1 };   // 밝은 바탕이라 글자를 어둡게
+const MEANING = {
+  CALM: '먼지 · 가스가 평소 값 근처예요.', CHANGED: '한 가지 값만 올랐거나 아직 10초가 안 됐어요.',
+  SMOKE: '먼지와 가스가 함께 오른 채 10초 넘게 이어졌어요.', HOLD: '함께 올랐지만 습도도 1분 안에 8%p 넘게 올라 수증기일 수 있어요.',
+  WAIT: '켠 뒤 4분 동안 예열하고 평소 공기를 재요.', NODATA: '30초 넘게 값이 오지 않았어요.', FAULT: '값이 센서 끝에 붙어 있어요. 선과 전원을 확인해요.',
+};
+const ORDER = ['SMOKE', 'HOLD', 'CHANGED', 'FAULT', 'NODATA', 'WAIT', 'CALM'];
+const $ = (id) => document.getElementById(id);
+const kstTime = (ms) => new Date(ms + 9 * 3600e3).toISOString().slice(11, 19);
+const sign = (v) => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const chipCls = (s) => (LIGHT_TEXT[s] ? ' light' : '');
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } return null; }
+
+// ---------------------------------------------------------------- 예시 데이터 (가상의 센서 6곳)
+// 각 지점에 이야기를 하나씩 줘요: 연기 / 평소 / 먼지만 / 수증기 / 끊김 / 다시 켬. 판단은 judge.js가 실제와 똑같이 해요.
+function noise(id, t, k) {   // 같은 입력이면 늘 같은 흔들림 (-1~1)
+  let h = 2166136261 ^ k;
+  for (const c of id + ':' + t) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) % 20001) / 10000 - 1;
+}
+const rise = (u, a, tau) => (u < a ? 0 : 1 - Math.exp(-(u - a) / tau));
+const fall = (u, b, tau) => (u < b ? 1 : Math.exp(-(u - b) / tau));
+const SCEN = {   // C: 한 바퀴(초), at: 처음 열었을 때의 위치(초), quiet: 평소 값만 나오는 위치(초), f: 그 순간 보낼 줄 (null이면 안 보냄)
+  'site-01': { C: 300, at: 160, quiet: 10, f(u, t, id) {  // 연기: 먼지와 가스가 함께 올랐다가 내려가요
+    const on = rise(u, 120, 12) * fall(u, 205, 22);
+    return { dust: 642 + 3 * noise(id, t, 1) + on * (1150 + 380 * Math.sin(u / 2.3)), gas: 151 + noise(id, t, 2) + on * 58, humidity: 46 }; } },
+  'site-02': { C: 300, at: 40, quiet: 10, f(u, t, id) {   // 평소
+    return { dust: 618 + 3 * noise(id, t, 1), gas: 162 + noise(id, t, 2) + 6 * Math.sin(u / 40), humidity: 41 }; } },
+  'site-03': { C: 420, at: 130, quiet: 10, f(u, t, id) {  // 먼지만: 운동장 흙먼지 같은 경우
+    const on = rise(u, 90, 10) * fall(u, 230, 15);
+    return { dust: 655 + 3 * noise(id, t, 1) + on * 160, gas: 149 + noise(id, t, 2), humidity: 44 }; } },
+  'site-04': { C: 480, at: 205, quiet: 10, f(u, t, id) {  // 수증기: 습도가 같이 올라 판단 보류 (식당 조리 김 같은 경우)
+    const on = rise(u, 150, 8) * fall(u, 230, 7);
+    const hum = u < 130 ? 47 : u < 170 ? 47 + (u - 130) * 0.4 : u < 300 ? 63 + (u - 170) * 0.16 : Math.max(47, 83.8 - (u - 300) * 0.25);
+    return { dust: 630 + 3 * noise(id, t, 1) + on * 700, gas: 148 + noise(id, t, 2) + on * 55, humidity: Math.round(hum) }; } },
+  'site-05': { C: 900, at: 660, quiet: 10, f(u, t, id) {  // 끊김: 노트북이나 케이블이 빠진 경우
+    if (u >= 600 && u < 720) return null;
+    return { dust: 600 + 3 * noise(id, t, 1), gas: 140 + noise(id, t, 2), humidity: null }; } },
+  'site-06': { C: 900, at: 140, quiet: 100, f(u, t, id) {  // 다시 켬: 4분 동안 기준 측정 전
+    if (u < 40) return null;
+    return { dust: 625 + 3 * noise(id, t, 1), gas: 155 + noise(id, t, 2), humidity: 43 }; } },
+};
+const clampLine = (r) => r && ({ dust: Math.max(0, Math.min(5000, Math.round(r.dust))), gas: Math.max(0, Math.min(1023, Math.round(r.gas))),
+                                 humidity: r.humidity === null ? null : Math.round(r.humidity) });
+const EX = { sites: new Map(), t0: 0, cur: 0, timer: null, events: [] };
+function exampleStart() {
+  EX.sites.clear(); EX.events = [];
+  EX.t0 = Math.floor(Date.now() / 2000) * 2;          // 2초 칸에 맞춰요 (초)
+  for (const c of DEFAULT_SITES) {
+    const sc = SCEN[c.id];
+    EX.sites.set(c.id, { judge: window.AirfaroJudge.create(), hist: [], last: null, lastT: null, shown: 'NODATA', n: 0, off: sc.at - (EX.t0 % sc.C) });
+  }
+  EX.warmEnd = EX.t0 - 1200 + 260;                    // 미리 돌릴 때 처음 4분 20초는 평소 값만 (평소 재기가 연기와 겹치지 않게)
+  for (let t = EX.t0 - 1200; t <= EX.t0; t += 2) exampleStep(t, true);   // 20분 앞부터 미리 돌려 둬요
+  clearInterval(EX.timer);
+  EX.timer = setInterval(() => { const t = Math.floor(Date.now() / 2000) * 2; let n = 0; while (EX.cur < t && n++ < 600) exampleStep(EX.cur + 2, EX.cur + 2 < t); refresh(); }, 500);
+}
+function exampleStep(t, quiet) {
+  EX.cur = t;
+  for (const [id, s] of EX.sites) {
+    const sc = SCEN[id];
+    const u = t < EX.warmEnd ? sc.quiet : (((t + s.off) % sc.C) + sc.C) % sc.C;
+    const r = clampLine(sc.f(u, t, id));
+    if (!r) {
+      if (s.lastT !== null && t - s.lastT > RULE.NO_DATA_S && s.shown !== 'NODATA') { addExEvent(id, s.shown, 'NODATA', t * 1000); s.shown = 'NODATA'; }
+      continue;
+    }
+    const st = s.judge.feed(r, t);
+    s.last = { t: t * 1000, ...r }; s.lastT = t; s.n++;
+    s.hist.push([t * 1000, r.dust, r.gas, r.humidity, st]);
+    while (s.hist.length && t * 1000 - s.hist[0][0] > 600e3) s.hist.shift();
+    if (st !== s.shown) { addExEvent(id, s.shown, st, t * 1000); s.shown = st; }
+  }
+  return quiet;
+}
+function addExEvent(site, from, to, t) { EX.events.push({ site, from, to, t }); if (EX.events.length > 100) EX.events.shift(); }
+function liveOf(J, last, n, hist, age) {
+  return { state: age > RULE.NO_DATA_S ? 'NODATA' : J.state, age_s: Math.round(age), n_rx: n, last_at: last.t,
+    dust: last.dust, gas: last.gas, humidity: last.humidity, phase: J.phase,
+    wait_left_s: J.phase === 'wait' && J.t0 !== null ? Math.max(0, Math.ceil(J.t0 + RULE.WAIT_S - J.lastT)) : null,
+    base_dust: Math.round(J.baseD), base_gas: Math.round(J.baseG), th_dust: J.thD, th_gas: J.thG, d_dust: J.dD, d_gas: J.dG,
+    high_dust: J.highD, high_gas: J.highG, n_dust: J.nD, n_gas: J.nG, hum_jump: J.humJump, history: hist };
+}
+function exampleStatus() {
+  const now = EX.cur * 1000;
+  return { mode: 'example', now, unplaced: [], sites: sitesConfig().map((c) => {
+    const s = EX.sites.get(c.id);
+    if (!s || !s.last) return { ...c, live: { state: 'NODATA', never: true, n_rx: 0 } };
+    return { ...c, live: liveOf(s.judge.J, s.last, s.n, s.hist, (now - s.last.t) / 1000) };
+  }), events: EX.events.slice(-60) };
+}
+
+// ---------------------------------------------------------------- 모드 · 지점 위치
+let mode = 'example';          // 'real' (서버 있음) 또는 'example'
+let serverOk = false, forceExample = false, lastReal = null, realErr = '';
+let selected = store('airfaro.sel') || 'site-01';
+let editing = false;
+let localPos = null;           // 예시 모드에서 옮긴 위치 (이 브라우저에만)
+try { localPos = JSON.parse(store('airfaro.pos3d') || 'null'); } catch (e) { localPos = null; }
+let serverSites = null;        // 실제 모드에서 서버가 준 지점 목록
+const placed = (s) => typeof s.x === 'number' && typeof s.z === 'number';
+
+function sitesConfig() {
+  const base = (mode === 'real' && serverSites) ? serverSites : DEFAULT_SITES;
+  return base.map((c) => (mode === 'example' && localPos && localPos[c.id]) ? { ...c, ...localPos[c.id] } : { ...c });
+}
+
+let pollSeq = 0;   // 늦게 도착한 옛 응답이 새 응답을 덮지 않게
+async function pollServer() {
+  const my = ++pollSeq;
+  try {
+    const ctl = new AbortController();
+    const to = setTimeout(() => ctl.abort(), 4000);
+    const hist = selected || '~';   // 그래프 기록은 고른 지점 것만 받아요 ('~' 는 어떤 지점 이름과도 같지 않아요)
+    const j = SB ? await snapshotStatus(hist, ctl.signal)
+      : await (await fetch(API + 'status?hist=' + encodeURIComponent(hist), { cache: 'no-store', signal: ctl.signal })).json();
+    clearTimeout(to);
+    if (my !== pollSeq) return;
+    if (j.server !== 'airfaro-map') throw new Error('다른 서버');
+    serverOk = true; realErr = ''; lastReal = j; lastReal.fetchedAt = Date.now();
+    if (!editing) serverSites = j.sites.filter(placed).map(({ live, ...c }) => c);
+    if (j.campus) $('campusName').textContent = j.campus;
+  } catch (e) {
+    if (my !== pollSeq) return;
+    if (serverOk) realErr = '서버에서 답이 없어요 (' + (e.name === 'AbortError' ? '시간 초과' : e.message) + ')';
+  }
+  setMode(serverOk && !forceExample ? 'real' : 'example');
+  refresh();
+}
+
+// 공개 서버: 데이터베이스가 준 재료로 server.js 와 같은 상태를 만들어요 (core.js = 공개 서버 함수와 같은 파일)
+let coreMod = null;
+async function snapshotStatus(hist, signal) {
+  const res = await fetch(SB + '/rest/v1/rpc/airfaro_snapshot', { method: 'POST', cache: 'no-store', signal,
+    headers: { 'Content-Type': 'application/json', apikey: SB_KEY }, body: JSON.stringify({ p_hist: hist }) });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const snap = await res.json();
+  coreMod = coreMod || import('./core.js');
+  let C;
+  try { C = await coreMod; } catch (e) { coreMod = null; throw e; }
+  return C.statusFromSnapshot(snap, hist, snap.now);
+}
+
+function setMode(m) {
+  if (m === mode && (m === 'real' || EX.timer)) return;
+  mode = m;
+  if (m === 'example' && !EX.timer) exampleStart();
+  if (m === 'real') { clearInterval(EX.timer); EX.timer = null; }
+  const b = $('banner'), chip = $('modeChip');
+  b.className = 'banner wrap ' + m; chip.className = 'modechip ' + m;
+  b.textContent = m === 'real'
+    ? '실제 관측 · 이 서버가 받은 값이에요 · 실물 검증 전 시범이에요'
+    : '예시 데이터예요 · 가상의 센서 6곳을 컴퓨터가 흉내 낸 값이라 실제 측정이 아니에요';
+  chip.textContent = m === 'real' ? '실제 관측' : '예시 모드';
+  $('btnSwitch').hidden = !serverOk;
+  $('csvRow').hidden = m !== 'real';
+  $('btnSwitch').textContent = m === 'real' ? '예시로 보기' : '실제 관측으로 돌아가기';
+  if (map) map.setSites(sitesConfig());
+}
+
+function currentStatus() {
+  if (mode === 'example' || !lastReal) return exampleStatus();
+  const j = lastReal;
+  const stale = (Date.now() - j.fetchedAt) / 1000;
+  // 서버 답이 늦으면 그만큼 나이를 더해, 서버가 꺼져도 초록으로 남지 않게 해요
+  const fix = (s) => {
+    const L = { ...s.live };
+    if (!L.never) { L.age_s = Math.round((L.age_s || 0) + stale); if (L.age_s > RULE.NO_DATA_S) L.state = 'NODATA'; }
+    return { ...s, live: L };
+  };
+  const pos = new Map((serverSites || []).map((c) => [c.id, c]));
+  const sites = j.sites.filter(placed).map((s) => fix({ ...s, ...(pos.get(s.id) || {}) }));
+  const unplaced = j.sites.filter((s) => !placed(s)).map(fix);
+  return { mode: 'real', now: Date.now(), sites, unplaced, events: j.events || [] };
+}
+
+// ---------------------------------------------------------------- 3D 지도
+let map = null;
+const isNight = () => { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+function startMap() {
+  const box = $('view3d');
+  try {
+    if (!window.THREE || !window.THREE.OrbitControls) throw new Error('3D 그리기 도구(three.js)를 불러오지 못했어요. 인터넷 연결을 확인해 주세요');
+    if (!window.CAMPUS) throw new Error('캠퍼스 자료(campus-data.js)를 불러오지 못했어요');
+    map = window.AirfaroMap3D.create(box, window.CAMPUS, { stateColors: HEX, stateNames: Object.fromEntries(Object.entries(STATES).map(([k, v]) => [k, v[0]])),
+                                                        night: isNight(), homeTarget: [-35, -5], homeDist: 520 });
+  } catch (e) {
+    box.innerHTML = `<div class="nogl"><div><b>3D 지도를 그리지 못했어요.</b><br>${esc(e.message)}<br>아래 목록과 기록은 그대로 볼 수 있어요.</div></div>`;
+    map = null; return;
+  }
+  map.onSelect = (id) => select(id, false);
+  map.onMove = (id, x, z, zone, zoneName) => {
+    const list = mode === 'real' && serverSites ? serverSites : null;
+    if (list) { const c = list.find((s) => s.id === id); if (c) Object.assign(c, { x, z, zone }); }
+    else { localPos = localPos || {}; localPos[id] = { x, z, zone }; }
+    $('editMsg').textContent = `옮겼어요. ${zoneName ? '이어진 건물: ' + zoneName : '30m 안에 건물이 없어 바닥 원만 색이 바뀌어요'}. 저장을 눌러야 남아요.`;
+    refresh();
+  };
+  map.setSites(sitesConfig());
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => map.setTheme(isNight()));
+  new MutationObserver(() => map.setTheme(isNight())).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  if (window.CAMPUS.attribution) $('attrib').textContent = window.CAMPUS.attribution;
+}
+
+// ---------------------------------------------------------------- 그리기
+function refresh() {
+  const st = currentStatus();
+  drawSummary(st); drawList(st); drawDetail(st); drawEvents(st);
+  if (map) {
+    map.setSites(st.sites);
+    map.setStates(Object.fromEntries(st.sites.map((s) => [s.id, s.live.state])));
+    map.select(selected);
+  }
+}
+
+function drawSummary(st) {
+  const n = {}; for (const s of st.sites) n[s.live.state] = (n[s.live.state] || 0) + 1;
+  const box = $('summary'); box.textContent = '';
+  for (const k of ORDER) {
+    if (!n[k]) continue;
+    const d = document.createElement('span'); d.className = 'sum';
+    d.innerHTML = `<i style="background:${HEX[k]}"></i>${STATES[k][0]} <b>${n[k]}</b>`;
+    box.appendChild(d);
+  }
+  const t = document.createElement('span'); t.className = 'sum';
+  t.innerHTML = `센서 <b>${st.sites.length}</b>곳 · ${mode === 'real' ? '5초마다 새로 읽어요' : '예시 시각'} <b>${kstTime(st.now)}</b>` +
+    (realErr && mode === 'real' ? ` · <span style="color:var(--s-smoke)">${esc(realErr)}</span>` : '');
+  box.appendChild(t);
+}
+
+function drawList(st) {
+  const box = $('list'); box.textContent = '';
+  st.sites.concat(st.unplaced || []).forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'site-row' + (s.id === selected ? ' sel' : '');
+    row.tabIndex = 0; row.setAttribute('role', 'button');
+    const L = s.live;
+    row.innerHTML = `<span class="num" style="background:${HEX[L.state]}">${i + 1}</span>` +
+      `<span class="nm">${esc(s.name)}<small>${esc(s.id)}</small>${placed(s) ? '' : ' <small>(지도 위치 없음)</small>'}</span>` +
+      `<span class="chip${chipCls(L.state)}" style="background:${HEX[L.state]}">${STATES[L.state][0]}</span>`;
+    row.onclick = () => select(s.id, true);
+    row.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(s.id, true); } };
+    box.appendChild(row);
+  });
+}
+
+function whyText(L) {
+  if (L.never) return mode === 'real' ? '이 지점 ID로 받은 값이 아직 없어요. 수집 페이지의 지점 ID와 서버 주소를 확인하세요.' : '값이 없어요.';
+  if (L.state === 'NODATA') return `마지막 값이 온 지 ${L.age_s}초가 지났어요. 노트북 · USB 케이블 · 장치 전원 · 수집 페이지 탭을 확인하세요.`;
+  if (L.state === 'WAIT') { const left = L.wait_left_s ?? RULE.WAIT_S; return `가스 센서 예열과 평소 공기 재기를 기다려요. 남은 시간 약 ${Math.floor(left / 60)}분 ${left % 60}초.`; }
+  if (L.state === 'FAULT') return MEANING.FAULT;
+  return `평소 먼지 ${L.base_dust}mV · 가스 ${L.base_gas} / 기준 +${L.th_dust} · +${L.th_gas}<br>지금 차이 먼지 ${sign(L.d_dust)} · 가스 ${sign(L.d_gas)}` +
+    (L.high_dust ? ` · 먼지 높음 ${L.n_dust}줄` : '') + (L.high_gas ? ` · 가스 높음 ${L.n_gas}줄` : '') + (L.hum_jump ? ' · 습도 급변' : '') +
+    `<br>${MEANING[L.state] || ''}`;
+}
+
+function spark(hist, idx, base, th, label) {
+  const W = 300, H = 64, P = 4;
+  if (!hist || hist.length < 2) return `<div class="chart-l"><span>${label}</span><span>값이 모이면 그려요</span></div>`;
+  const t1 = hist[hist.length - 1][0], t0 = t1 - 600e3;
+  const vals = hist.map((h) => h[idx]);
+  let lo = Math.min(...vals, base ?? Infinity), hi = Math.max(...vals, base != null && th != null ? base + th : -Infinity);
+  if (hi - lo < 10) { hi += 5; lo -= 5; }
+  const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+  const X = (t) => P + (W - 2 * P) * (t - t0) / 600e3, Y = (v) => H - P - (H - 2 * P) * (v - lo) / (hi - lo);
+  let bands = '';
+  for (let i = 0; i < hist.length - 1; i++) {
+    const s = hist[i][4];
+    if (s === 'SMOKE' || s === 'HOLD' || s === 'CHANGED')
+      bands += `<rect x="${X(hist[i][0]).toFixed(1)}" y="0" width="${Math.max(0.6, X(hist[i + 1][0]) - X(hist[i][0])).toFixed(1)}" height="${H}" fill="${HEX[s]}" opacity=".18"/>`;
+  }
+  const pts = hist.map((h) => `${X(h[0]).toFixed(1)},${Y(h[idx]).toFixed(1)}`).join(' ');
+  const last = hist[hist.length - 1];
+  const ref = base != null && th != null
+    ? `<line x1="${P}" x2="${W - P}" y1="${Y(base).toFixed(1)}" y2="${Y(base).toFixed(1)}" stroke="var(--muted)" stroke-dasharray="3 3" stroke-width="1" vector-effect="non-scaling-stroke"/>` +
+      `<line x1="${P}" x2="${W - P}" y1="${Y(base + th).toFixed(1)}" y2="${Y(base + th).toFixed(1)}" stroke="var(--s-smoke)" stroke-dasharray="5 3" stroke-width="1" opacity=".75" vector-effect="non-scaling-stroke"/>` : '';
+  return `<div class="chart-l"><span>${label} · 최근 10분</span><span>${base != null ? `회색 점선 평소 ${base} · 빨간 점선 기준 +${th}` : ''}</span></div>` +
+    `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${label} 최근 10분 그래프">${bands}${ref}` +
+    `<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.8" vector-effect="non-scaling-stroke"/>` +
+    `<circle cx="${X(last[0]).toFixed(1)}" cy="${Y(last[idx]).toFixed(1)}" r="3" fill="var(--accent)"/></svg>`;
+}
+
+function drawDetail(st) {
+  const all = st.sites.concat(st.unplaced || []);
+  const s = all.find((x) => x.id === selected) || all[0];
+  const box = $('detail');
+  if (!s) { box.innerHTML = '<h2>선택한 지점</h2><p class="why">지점이 없어요.</p>'; return; }
+  const L = s.live, run = L.phase === 'run';
+  const zone = map ? map.zoneOf(s.id) : null;
+  box.innerHTML = `<h2>선택한 지점</h2>
+    <div class="detail-head"><h3>${esc(s.name)}</h3><span class="id">${esc(s.id)}</span>
+      <span class="bigstate${chipCls(L.state)}" style="background:${HEX[L.state]}">${STATES[L.state][0]}</span></div>
+    <div class="small">${esc(s.place || '')}${L.never ? '' : ` · 마지막 수신 ${kstTime(L.last_at)}${mode === 'example' ? ' (예시 시각)' : ''} · 받은 줄 ${L.n_rx}`}</div>
+    <p class="zone">${zone && zone.name ? `이어진 건물: <b>${esc(zone.name)}</b> · 흡연 의심이면 이 건물이 빨갛게 바뀌어요` : zone ? '이어진 건물: 이름 없는 건물' : '이어진 건물 없음 · 바닥 원만 색이 바뀌어요'}</p>
+    <p class="why">${whyText(L)}</p>
+    <div class="vals">
+      <div class="v"><span>먼지 센서 출력</span><b>${L.never ? '-' : L.dust}</b><em>mV${run ? ' · 평소보다 ' + sign(L.d_dust) : ''}</em></div>
+      <div class="v"><span>가스 센서 값</span><b>${L.never ? '-' : L.gas}</b><em>0~1023${run ? ' · ' + sign(L.d_gas) : ''}</em></div>
+      <div class="v"><span>습도</span><b>${L.never ? '-' : L.humidity === null ? '없음' : L.humidity}</b><em>${L.humidity === null && !L.never ? '센서 없음 (null)' : '%'}</em></div>
+    </div>
+    <div class="charts">${spark(L.history, 1, run ? L.base_dust : null, L.th_dust, '먼지 mV')}${spark(L.history, 2, run ? L.base_gas : null, L.th_gas, '가스')}</div>`;
+}
+
+function drawEvents(st) {
+  const names = Object.fromEntries(st.sites.concat(st.unplaced || []).map((s) => [s.id, s.name]));
+  const ul = $('events'); ul.textContent = '';
+  const ev = st.events.slice().reverse().slice(0, 40);
+  if (!ev.length) { ul.innerHTML = '<li><span class="small">아직 바뀐 것이 없어요.</span></li>'; return; }
+  for (const e of ev) {
+    const li = document.createElement('li');
+    li.innerHTML = `<time>${kstTime(e.t)}</time><span><b>${esc(names[e.site] || e.site)}</b> ` +
+      `<span class="small">${STATES[e.from] ? STATES[e.from][0] : '-'} →</span> <b>${STATES[e.to] ? STATES[e.to][0] : e.to}</b></span>`;
+    ul.appendChild(li);
+  }
+}
+
+function drawLegend() {
+  const box = $('legend');
+  for (const k of ['CALM', 'CHANGED', 'SMOKE', 'HOLD', 'WAIT', 'NODATA', 'FAULT']) {
+    const d = document.createElement('div');
+    d.innerHTML = `<i style="background:${HEX[k]}"></i><span><b>${STATES[k][0]}</b> · ${MEANING[k]}</span>`;
+    box.appendChild(d);
+  }
+}
+
+function select(id, fly) {
+  const changed = id !== selected;
+  selected = id; store('airfaro.sel', id); if (fly && map) map.focus(id); refresh();
+  if (changed && mode === 'real' && !NO_SERVER) pollServer();   // 고른 지점의 그래프 기록을 바로 받아요
+}
+
+// ---------------------------------------------------------------- 핀 옮기기
+function setEditing(on) {
+  editing = on;
+  if (map) map.setEditing(on);
+  $('editbar').hidden = !on; $('jsonbox').hidden = true;
+  $('btnEdit').classList.toggle('on', on);
+  $('btnEdit').textContent = on ? '옮기기 끝내기' : '핀 위치 옮기기';
+  $('btnSave').textContent = mode === 'real' ? '서버에 위치 저장' : '이 브라우저에 저장';
+  $('editMsg').textContent = '';
+}
+async function savePositions() {
+  if (mode === 'real') {
+    try {
+      const res = await fetch(API + 'sites', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sites: serverSites }) });
+      const j = await res.json();
+      $('editMsg').textContent = j.ok ? '서버의 sites.json에 저장했어요.' : j.error;
+    } catch (e) { $('editMsg').textContent = '저장하지 못했어요: ' + e.message; }
+  } else {
+    store('airfaro.pos3d', JSON.stringify(localPos || {}));
+    $('editMsg').textContent = '이 브라우저에만 저장했어요. 서버에 옮기려면 위치 JSON을 sites.json에 붙여 넣으세요.';
+  }
+}
+function positionsJson() {
+  return JSON.stringify({ campus: $('campusName').textContent, sites: sitesConfig().map(({ id, name, place, x, z, zone }) => ({ id, name, place, x, z, zone: zone || null })) }, null, 2);
+}
+async function copyPositions() {
+  const text = positionsJson();
+  $('jsonText').value = text; $('jsonbox').hidden = false;
+  try { await navigator.clipboard.writeText(text); $('editMsg').textContent = '복사했어요.'; }
+  catch (e) { $('jsonText').select(); $('editMsg').textContent = '아래 글을 직접 복사하세요.'; }
+}
+
+// ---------------------------------------------------------------- 시작
+function init() {
+  if (!document.documentElement.lang) document.documentElement.lang = 'ko';   // 미리 보기 사본은 뼈대가 따로 붙어요
+  drawLegend();
+  $('btnEdit').onclick = () => setEditing(!editing);
+  $('btnSave').onclick = savePositions;
+  $('btnCopy').onclick = copyPositions;
+  $('btnReset').onclick = () => {
+    if (mode === 'real') { $('editMsg').textContent = '실제 모드에서는 서버의 sites.json이 기준이에요.'; return; }
+    localPos = null; store('airfaro.pos3d', ''); if (map) map.setSites(sitesConfig()); refresh(); $('editMsg').textContent = '처음 위치로 돌렸어요.';
+  };
+  $('btnSwitch').onclick = () => { forceExample = mode === 'real'; setEditing(false); setMode(forceExample ? 'example' : 'real'); refresh(); };
+  $('btnHome').onclick = () => map && map.viewHome();
+  $('btnTop').onclick = () => map && map.viewTop();
+  $('btnSpin').onclick = () => { if (!map) return; const on = !$('btnSpin').classList.contains('on'); $('btnSpin').classList.toggle('on', on); map.setAutoRotate(on); };
+  exampleStart();
+  setMode('example');
+  startMap();
+  refresh();
+  $('staticNote').hidden = !NO_SERVER || location.protocol === 'file:';
+  if ($('csvLink')) $('csvLink').href = API + 'export.csv';
+  if (SB) {   // 공개 지도: 핀 위치는 노트북의 server.js 화면에서 옮겨 sites.json 으로 관리해요
+    $('btnEdit').hidden = true;
+    if ($('csvNote')) $('csvNote').textContent = ' · 공개 서버(Supabase)에 쌓여요';
+  }
+  if (!NO_SERVER) { pollServer(); setInterval(pollServer, POLL_MS); }
+  setInterval(() => { if (mode === 'real' && lastReal) refresh(); }, 1000);
+}
+init();
+</script>
+</body>
+</html>
