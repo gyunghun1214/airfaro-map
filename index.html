@@ -105,7 +105,8 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
 .bottom { padding-block: 0 32px; display: grid; gap: 14px; }
 /* 3D 위의 이름표 */
 .m3-wrap { position: absolute; inset: 0; overflow: hidden; }
-.m3-wrap canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+.m3-wrap canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; cursor: grab; }
+.m3-wrap.m3-grabbing canvas { cursor: grabbing; }
 .m3-labels { position: absolute; inset: 0; pointer-events: none; }
 .m3-bl { position: absolute; left: 0; top: 0; padding: 1px 7px; border-radius: 5px; background: rgba(17, 25, 31, .84); color: #fff;
          font: 700 12px/1.6 var(--f-body); white-space: nowrap; border: 1px solid rgba(255, 255, 255, .5); will-change: transform; }
@@ -141,7 +142,7 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
 <main class="grid wrap">
   <div class="mapbox" id="mapbox">
     <div class="mapbar">
-      <span class="hint">끌어서 돌리고, 두 손가락이나 휠로 확대해요. 기둥 = 공기 변화를 재는 <b>센서 위치</b>예요. 흡연한 사람의 위치가 아니에요.</span>
+      <span class="hint">끌어서 옮기고, 오른쪽 버튼이나 Ctrl+끌기로 돌려요(휴대폰은 두 손가락). 휠이나 두 손가락으로 확대해요. 기둥 = 공기 변화를 재는 <b>센서 위치</b>예요. 흡연한 사람의 위치가 아니에요.</span>
       <button id="btnHome" type="button">기본 보기</button>
       <button id="btnTop" type="button">위에서 보기</button>
       <button id="btnSpin" type="button">천천히 돌기</button>
@@ -188,6 +189,7 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
       <li>먼지 값은 센서 출력 전압(mV)이고, 가스 값은 0~1023 숫자예요. 니코틴 양 · 확률 · 정확한 미세먼지(PM2.5) 농도가 아니에요.</li>
       <li>30초 넘게 값이 안 오면 회색 '수신 없음'으로 바꿔요. 값이 없을 때 초록으로 두지 않아요.</li>
       <li>장치를 켜거나 다시 연결하면 4분(예열 3분 + 평소 재기 1분) 동안 '기준 측정 전'이에요.</li>
+      <li>대운동장은 실제처럼 평평한 축구장으로, 정각원 · 종각은 기와지붕 전통 건물로 그린 모형이에요. 둘레 땅 높이는 모형에 맞춰 고른 값이라 실제와 조금 달라요.</li>
       <li>지도 위를 걷는 학생은 화면을 꾸미는 가상 캐릭터예요. 실제 사람의 위치가 아니고, 냄새를 잰 것도 아니에요. '흡연 의심' 센서 둘레에 들어가면 "아 담배 냄새!" 하고 코를 막고 피해 가서 판단 결과를 눈에 띄게 보여 줄 뿐이에요 (판단 보류 · 공기 변화에는 반응하지 않아요). 지도 위 '학생 캐릭터' 단추로 끌 수 있어요.</li>
     </ul>
   </section>

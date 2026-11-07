@@ -11,17 +11,17 @@
 
   const PALETTE = {
     day: { sky: 0xe7ecee, fog: 0xe7ecee, skirt: '#8a7f70', skirtDark: '#6f665a',
-           ground: '#b4b8b3', urban: '#aeb0aa', campus: '#bfc3bc', grass: '#82a95f', wood: '#5b8945', pitch: '#6aa64c', pitchLine: '#e4efdf',
+           ground: '#b4b8b3', urban: '#aeb0aa', campus: '#bfc3bc', grass: '#82a95f', wood: '#5b8945', pitch: '#6aa64c', pitchLine: '#e4efdf', pitchAlt: '#5c9842', pitchOut: '#578c43', pitchMark: '#f4f8f2',
            parking: '#a6a9a6', plaza: '#d8d2c3', water: '#7fb7cf', road: '#4d5256', curb: '#dcd9d0', line: '#f2f1ea', path: '#e4dfd2', pathEdge: '#c2bba9', steps: '#cfc8b7',
-           wall: 0xeef0ec, wallBg: 0xcfd2cd, roof: 0x86a48f, roofAlt: 0xb3bab2, roofBg: 0xa9ada7, box: 0xe3e6e3,
+           wall: 0xeef0ec, wallBg: 0xcfd2cd, roof: 0x86a48f, roofAlt: 0xb3bab2, roofBg: 0xa9ada7, box: 0xe3e6e3, tradWall: 0xffffff, tradRoof: 0xffffff,
            tree: 0x3f7a30, treeAlt: 0x5a9442, trunk: 0x6b5a45, hemiSky: 0xffffff, hemiGround: 0x7d8278, hemi: 0.58, sun: 0.72,
            edge: 0x56626c, edgeOp: 0.3,
            window: 'rgba(110,140,162,0.55)', windowLit: null,
            glassTop: 'rgba(172,198,216,0.85)', glassBot: 'rgba(94,126,150,0.85)', frame: 'rgba(64,76,88,0.32)', mullion: 'rgba(255,255,255,0.6)', litTop: null, litBot: null },
     night: { sky: 0x0d1921, fog: 0x0d1921, skirt: '#38332d', skirtDark: '#29251f',
-             ground: '#2a343b', urban: '#262f35', campus: '#303c43', grass: '#2b4f35', wood: '#22412c', pitch: '#2e5a37', pitchLine: '#6a8a72',
+             ground: '#2a343b', urban: '#262f35', campus: '#303c43', grass: '#2b4f35', wood: '#22412c', pitch: '#2e5a37', pitchLine: '#6a8a72', pitchAlt: '#2a5232', pitchOut: '#274b2f', pitchMark: '#93b49c',
              parking: '#323b41', plaza: '#454b4b', water: '#24485b', road: '#161b1f', curb: '#4d585e', line: '#8a949a', path: '#4a5255', pathEdge: '#394045', steps: '#525a5c',
-             wall: 0x75858f, wallBg: 0x48535a, roof: 0x4b665f, roofAlt: 0x5a6867, roofBg: 0x3b454b, box: 0x75828a,
+             wall: 0x75858f, wallBg: 0x48535a, roof: 0x4b665f, roofAlt: 0x5a6867, roofBg: 0x3b454b, box: 0x75828a, tradWall: 0x8f9aa2, tradRoof: 0x7f8a93,
              tree: 0x2d5636, treeAlt: 0x3a6540, trunk: 0x3a3229, hemiSky: 0xb3c5d6, hemiGround: 0x1d252a, hemi: 0.78, sun: 0.42,
              edge: 0x070d11, edgeOp: 0.5,
              window: 'rgba(38,52,62,0.9)', windowLit: 'rgba(255,212,140,0.9)',
@@ -422,7 +422,7 @@
     const span = Math.max(W, D);
     const TR = campus.terrain;
     // 땅 높이: 10m 간격 고도를 부드러운 곡선(Catmull-Rom)으로 이어요 → 비탈이 10m 마다 꺾이지 않아요
-    function hAt(x, z) {
+    function hRaw(x, z) {
       if (!TR) return 0;
       const gx = (x - TR.x0) / TR.step, gz = (z - TR.z0) / TR.step;
       const i = Math.floor(gx), j = Math.floor(gz), fx = gx - i, fz = gz - j;
@@ -431,6 +431,54 @@
       const row = (b) => cr(g(i - 1, b), g(i, b), g(i + 1, b), g(i + 2, b), fx);
       return cr(row(j - 1), row(j), row(j + 1), row(j + 2), fz);
     }
+    // ---- 평평하게 고른 땅: 축구장(대운동장)과 전통 건물 터
+    //   고도 자료(10m 간격)는 둘레의 비탈을 운동장 안까지 끌고 들어와, 실제로는 평평한 운동장이 26~54m 로 오르내렸어요.
+    //   안쪽(+margin)은 안쪽 평균 높이 하나로 두고, 그 바깥 band m 동안 원래 땅으로 부드럽게 이어요 (둘레가 둑처럼 보여요)
+    const FLATS = [];
+    function addFlat(kind, name, ring, margin, band, step) {
+      const bb = bbox(ring); let sum = 0, n = 0;
+      for (let x = bb[0] + step / 2; x < bb[2]; x += step) for (let z = bb[1] + step / 2; z < bb[3]; z += step) if (inside([x, z], ring)) { sum += hRaw(x, z); n++; }
+      const m = margin + band;
+      const f = { kind, name, ring, margin, band, level: n ? sum / n : hRaw(...centroid(ring)), bb: [bb[0] - m, bb[1] - m, bb[2] + m, bb[3] + m] };
+      FLATS.push(f);
+      return f;
+    }
+    function hAt(x, z) {
+      let h = hRaw(x, z);
+      for (const f of FLATS) {
+        if (x < f.bb[0] || x > f.bb[2] || z < f.bb[1] || z > f.bb[3]) continue;
+        const d = inside([x, z], f.ring) ? 0 : distToRing([x, z], f.ring);
+        if (d >= f.margin + f.band) continue;
+        const t = d <= f.margin ? 0 : (d - f.margin) / f.band;
+        h += (f.level - h) * (1 - t * t * (3 - 2 * t));
+      }
+      return h;
+    }
+    // 가장 작은 넓이로 감싸는 돌린 직사각형: 가운데(cx, cz), 긴 쪽 방향 th(-90°~90°), 반 길이 L ≥ 반 폭 W
+    function obb(ring) {
+      let best = null;
+      for (let i = 0; i < ring.length; i++) {
+        const a = ring[i], b = ring[(i + 1) % ring.length]; if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 0.5) continue;
+        const th = Math.atan2(b[1] - a[1], b[0] - a[0]), ux = Math.cos(th), uz = Math.sin(th);
+        let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9;
+        for (const [x, z] of ring) { const u = x * ux + z * uz, v = -x * uz + z * ux; u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v); }
+        const A = (u1 - u0) * (v1 - v0);
+        if (!best || A < best.A - 1e-6) best = { A, th, u0, u1, v0, v1 };
+      }
+      let { th } = best; const { u0, u1, v0, v1 } = best;
+      const uc = (u0 + u1) / 2, vc = (v0 + v1) / 2, cx = uc * Math.cos(th) - vc * Math.sin(th), cz = uc * Math.sin(th) + vc * Math.cos(th);
+      let L = (u1 - u0) / 2, W = (v1 - v0) / 2;
+      if (W > L) { [L, W] = [W, L]; th += Math.PI / 2; }
+      while (th > Math.PI / 2) th -= Math.PI;
+      while (th <= -Math.PI / 2) th += Math.PI;
+      return { cx, cz, th, L, W };
+    }
+    // 축구장 크기: 정식 105 × 68m 가 들어가면 그대로, 작으면 줄여요 (k = 줄인 비율)
+    function soccerDims(box) { const PL = Math.min(52.5, box.L - 4.5), PW = Math.min(34, box.W - 3); return { PL, PW, k: Math.max(0.4, Math.min(1, PL / 52.5, PW / 34)) }; }
+    const soccerFields = (campus.areas || []).filter((a) => a.k === 'pitch' && a.sport === 'soccer').map((a) => ({ a, ring: ringPts(a.outer) })).filter((q) => q.ring.length >= 3);
+    for (const q of soccerFields) { q.box = obb(q.ring); q.flat = addFlat('pitch', q.a.name || '', q.ring, 4, 22, 2); }
+    const tradSites = (campus.buildings || []).filter((b) => b.trad).map((b) => ({ b, ring: ringPts(b.outer) })).filter((q) => q.ring.length >= 3);
+    for (const q of tradSites) { q.box = obb(q.ring); q.flat = addFlat(q.b.trad, q.b.name || '', q.ring, 3, 10, 1); }
     const SKIRT = -10;   // 모형 받침 바닥 높이
 
     const scene = new T.Scene();
@@ -440,24 +488,35 @@
     controls.maxPolarAngle = Math.PI * 0.42; controls.minPolarAngle = 0;
     controls.minDistance = 30; controls.maxDistance = span * 2.2;   // 30m 까지 가까이: 걷는 학생도 보여요
     controls.screenSpacePanning = false;
+    // 지도처럼 움직여요: 왼쪽 끌기 = 옮기기, 오른쪽 끌기 · Ctrl/Shift + 끌기 = 돌리기, 휠 = 확대 · 축소
+    //   손가락: 한 손가락 = 옮기기, 두 손가락 = 벌려 확대 · 비틀어 돌리기
+    controls.mouseButtons = { LEFT: T.MOUSE.PAN, MIDDLE: T.MOUSE.DOLLY, RIGHT: T.MOUSE.ROTATE };
+    controls.touches = { ONE: T.TOUCH.PAN, TWO: T.TOUCH.DOLLY_ROTATE };
     const homeT = opts.homeTarget || [0, 0];
     const HOME = { theta: opts.homeTheta ?? 1.32, phi: opts.homePhi ?? 0.92, dist: opts.homeDist ?? span * 1.02 };
+    let lastTX = 0, lastTZ = 0;   // 끌어 옮기기 전 기준점 자리 (아래 'change' 참고)
     // 손을 뗀 뒤에도 남아 있는 회전 관성을 먼저 없애고 옮겨요 (안 그러면 기본 보기를 눌러도 조금 더 돌아가요)
     function stopCoasting() { const d = controls.enableDamping; controls.enableDamping = false; controls.update(); controls.enableDamping = d; }
     function setView(theta, phi, dist, tx, tz) {
       stopCoasting();
-      controls.target.set(tx, hAt(tx, tz), tz);
+      controls.target.set(tx, hAt(tx, tz), tz); lastTX = tx; lastTZ = tz;
       const t = controls.target;
       camera.position.set(t.x + dist * Math.sin(phi) * Math.sin(theta), t.y + dist * Math.cos(phi), t.z + dist * Math.sin(phi) * Math.cos(theta));
       camera.lookAt(t); controls.update();
     }
     setView(HOME.theta, HOME.phi, HOME.dist, homeT[0], homeT[1]);
     let userMoved = false;   // 사람이 지도를 움직이기 전까지는 화면 크기가 바뀌면 기본 보기를 다시 맞춰요
+    // 끌어 옮기면(손을 뗀 뒤 미끄러지는 동안도) 기준점이 언덕을 따라 오르내려요. 땅과의 높이 차는 그대로 둬요
+    //   (지붕 위 센서로 간 뒤에 옮겨도 화면이 튀지 않아요). 돌리기 · 확대는 기준점이 그대로라 높이도 그대로예요.
+    //   느린 기기에서 오래 미끄러져도 같아요 (시간이 아니라 옮긴 거리로 계산해요)
     controls.addEventListener('start', () => { userMoved = true; });
     // 화면 밖으로 너무 멀리 끌고 가지 않게
     controls.addEventListener('change', () => {
       const t = controls.target, cx = Math.max(R.x0, Math.min(R.x1, t.x)), cz = Math.max(R.z0, Math.min(R.z1, t.z));
-      if (cx !== t.x || cz !== t.z) { const dx = cx - t.x, dz = cz - t.z; t.x = cx; t.z = cz; camera.position.x += dx; camera.position.z += dz; }
+      const moved = Math.abs(cx - lastTX) > 1e-4 || Math.abs(cz - lastTZ) > 1e-4;
+      const dy = moved ? hAt(cx, cz) - hAt(lastTX, lastTZ) : 0;
+      if (cx !== t.x || cz !== t.z || dy) { const dx = cx - t.x, dz = cz - t.z; t.x = cx; t.z = cz; t.y += dy; camera.position.x += dx; camera.position.y += dy; camera.position.z += dz; }
+      lastTX = t.x; lastTZ = t.z;
     });
 
     const hemi = new T.HemisphereLight(0xffffff, 0x888888, 0.75); scene.add(hemi);
@@ -528,6 +587,32 @@
     }
 
     const VEC_ROADS = opts.vectorRoads !== false;
+    // 축구장 그림: 잔디 줄무늬 + 흰 선 (터치라인 · 하프라인 · 센터서클 · 벌칙 구역 · 골 구역 · 벌칙 점 · 반원 · 모서리).
+    //   선은 실제(12cm)보다 굵게(45cm) 그려야 멀리서도 보여요
+    function paintSoccer(c, sf, p, X, Z, sx, sz) {
+      const { cx, cz, th } = sf.box, { PL, PW, k } = soccerDims(sf.box);
+      c.save();
+      c.beginPath(); sf.ring.forEach(([x, z], i) => (i ? c.lineTo(X(x), Z(z)) : c.moveTo(X(x), Z(z)))); c.closePath();
+      c.fillStyle = p.pitchOut; c.fill(); c.clip();
+      c.translate(X(cx), Z(cz)); c.scale(sx, sz); c.rotate(th);   // 여기부터 단위는 m: 가로 = 긴 쪽, 세로 = 짧은 쪽
+      const N = 14, sw = 2 * PL / N;
+      for (let i = 0; i < N; i++) { c.fillStyle = i % 2 ? p.pitchAlt : p.pitch; c.fillRect(-PL + i * sw, -PW, sw + 0.02, 2 * PW); }
+      c.strokeStyle = p.pitchMark; c.fillStyle = p.pitchMark; c.lineWidth = 0.45;
+      const arc = (x, y, r, a0, a1) => { c.beginPath(); c.arc(x, y, r, a0, a1); c.stroke(); };
+      const dot = (x, y, r) => { c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); };
+      c.strokeRect(-PL, -PW, 2 * PL, 2 * PW);
+      c.beginPath(); c.moveTo(0, -PW); c.lineTo(0, PW); c.stroke();
+      arc(0, 0, 9.15 * k, 0, Math.PI * 2); dot(0, 0, 0.5);
+      const ang = Math.acos((16.5 - 11) / 9.15);
+      for (const sgn of [-1, 1]) {
+        const gx = sgn * PL, inward = -sgn;
+        for (const [dep, half] of [[16.5, 20.16], [5.5, 9.16]]) c.strokeRect(inward > 0 ? gx : gx - dep * k, -half * k, dep * k, 2 * half * k);
+        const ps = gx + inward * 11 * k; dot(ps, 0, 0.45);
+        if (inward > 0) arc(ps, 0, 9.15 * k, -ang, ang); else arc(ps, 0, 9.15 * k, Math.PI - ang, Math.PI + ang);
+        for (const sv of [-1, 1]) { const a0 = inward > 0 ? (sv > 0 ? -Math.PI / 2 : 0) : (sv > 0 ? Math.PI : Math.PI / 2); arc(gx, sv * PW, 1.2 * k, a0, a0 + Math.PI / 2); }
+      }
+      c.restore();
+    }
     function paintGround(p) {
       const c = groundCanvas.getContext('2d'), sx = groundCanvas.width / W, sz = groundCanvas.height / D;
       const X = (x) => (x - R.x0) * sx, Z = (z) => (z - R.z0) * sz;
@@ -541,7 +626,9 @@
       const areas = (campus.areas || []).slice().sort((a, b) => ORDER.indexOf(a.k) - ORDER.indexOf(b.k));
       for (const a of areas) {
         poly(a.outer, a.holes); c.fillStyle = p[a.k] || p.grass; c.fill('evenodd');
-        if (a.k === 'pitch') { c.strokeStyle = p.pitchLine; c.lineWidth = 0.5 * sx; c.stroke(); }
+        const sf = a.k === 'pitch' ? soccerFields.find((q) => q.a === a) : null;
+        if (sf) paintSoccer(c, sf, p, X, Z, sx, sz);
+        else if (a.k === 'pitch') { c.strokeStyle = p.pitchLine; c.lineWidth = 0.5 * sx; c.stroke(); }
         if (a.k === 'parking') { c.save(); poly(a.outer, a.holes); c.clip('evenodd'); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 0.15 * sx; for (let x = 0; x < groundCanvas.width; x += 2.6 * sx) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, groundCanvas.height); c.stroke(); } c.restore(); }
       }
       if (!VEC_ROADS) {   // 길을 도형으로 그리지 않을 때만 캔버스에 그려요
@@ -698,11 +785,178 @@
     const buildings = [];
     const roofBoxes = [];
     const edgePos = [];
+    // 고른 땅 가까이 있는 건물은 벽 아래를 새 땅보다 깊이 내려요 (땅을 낮춘 쪽에서 건물이 뜨지 않게). 멀면 Infinity
+    function groundLow(outer) {
+      const bb = bbox(outer);
+      if (!FLATS.some((f) => bb[2] >= f.bb[0] && bb[0] <= f.bb[2] && bb[3] >= f.bb[1] && bb[1] <= f.bb[3])) return Infinity;
+      let lo = Infinity;
+      for (let i = 0; i < outer.length; i++) { const a = outer[i], b = outer[(i + 1) % outer.length]; lo = Math.min(lo, hAt(a[0], a[1]), hAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)); }
+      for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) { const x = bb[0] + (bb[2] - bb[0]) * i / 4, z = bb[1] + (bb[3] - bb[1]) * j / 4; if (inside([x, z], outer)) lo = Math.min(lo, hAt(x, z)); }
+      return lo;
+    }
+
+    // ---- 전통 건물 (정각원 · 동국대종각): 돌 기단 + 붉은 기둥 + 단청 띠 + 팔작지붕
+    //   OSM 윤곽은 위에서 본 지붕(처마 끝)이라 기둥은 처마 안쪽(over m)에 세워요.
+    //   처마 끝은 모서리로 갈수록 들리고(lift) 바깥으로 휘어요(flare). 지붕 면은 처마 쪽이 완만하고 위로 갈수록 가팔라요(오목)
+    //   땅은 위 FLATS 에서 건물 터만큼 평평하게 골라 두었어요
+    const TRAD_DIM = {
+      hall: { over: [0.25, 1.6, 3], plat: 0.9, platOut: 1.4, col: 4.6, band: 1.1, colR: 0.32, bay: 4.4, eave: 5.3, lift: 1.0, flare: 0.7, ridge: 11.2, a: 0.52, thk: 0.38, gableOver: 0.45, ridgeW: 0.6, walls: true },
+      pavilion: { over: [0.34, 0.9, 1.6], plat: 0.6, platOut: 0.6, col: 2.9, band: 0.55, colR: 0.2, bay: 2.6, eave: 3.0, lift: 0.5, flare: 0.35, ridge: 5.8, a: 0.52, thk: 0.24, gableOver: 0.25, ridgeW: 0.36, walls: false },
+    };
+    const tradMats = [];   // 낮 · 밤 색을 바꿀 재질
+    function tradMat(day, night, extra) { const m = new T.MeshLambertMaterial(Object.assign({ color: day }, extra || {})); tradMats.push({ mat: m, day, night }); return m; }
+    function canvasTex(w, h, draw) { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h); const t = new T.CanvasTexture(cv); t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = ANISO; return t; }
+    let TRAD_TEX = null;
+    function tradTextures() {
+      if (TRAD_TEX) return TRAD_TEX;
+      // 기와: 처마 방향으로 0.32m 마다 골이 진 줄
+      const tile = canvasTex(32, 8, (g, w, h) => {
+        for (let x = 0; x < w; x++) { const v = Math.round(86 + 26 * (0.5 + 0.5 * Math.cos((x / w) * Math.PI * 2))); g.fillStyle = `rgb(${v},${v + 5},${v + 10})`; g.fillRect(x, 0, 1, h); }
+      });
+      // 문살 한 칸 (가로 = 기둥 사이 한 칸, 세로 = 기둥 높이): 문틀 · 창호지 · 띠살 · 두 짝 문
+      const lattice = canvasTex(128, 128, (g, w, h) => {
+        g.fillStyle = '#7b3a2a'; g.fillRect(0, 0, w, h);
+        const x0 = 10, x1 = w - 10, y0 = 14, y1 = h - 22;
+        g.fillStyle = '#efe5c9'; g.fillRect(x0, y0, x1 - x0, y1 - y0);
+        g.strokeStyle = '#8a5a3a'; g.lineWidth = 1;
+        for (let x = x0 + 4; x < x1; x += 6) { g.beginPath(); g.moveTo(x + 0.5, y0); g.lineTo(x + 0.5, y1); g.stroke(); }
+        for (const f of [0.22, 0.5, 0.78]) for (const dy of [-3, 0, 3]) { const y = Math.round(y0 + (y1 - y0) * f) + dy + 0.5; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); }
+        g.fillStyle = '#5e2a1e'; g.fillRect(w / 2 - 1, y0, 2, y1 - y0);
+      });
+      // 단청 띠 (2.2m 한 마디): 녹색 바탕 · 붉은 띠 · 꽃 무늬 · 파란 마름모
+      const dancheong = canvasTex(256, 64, (g, w, h) => {
+        g.fillStyle = '#3d7d69'; g.fillRect(0, 0, w, h);
+        g.fillStyle = '#a5392b'; g.fillRect(0, h - 10, w, 10);
+        g.fillStyle = '#284f45'; g.fillRect(0, 0, w, 6);
+        for (const cx of [w * 0.25, w * 0.75]) {
+          g.fillStyle = '#f1ead6'; g.beginPath(); g.arc(cx, h * 0.45, 13, 0, Math.PI * 2); g.fill();
+          g.fillStyle = '#d9822b'; g.beginPath(); g.arc(cx, h * 0.45, 7, 0, Math.PI * 2); g.fill();
+        }
+        g.fillStyle = '#3a5f9a';
+        for (const cx of [0, w * 0.5, w]) { g.beginPath(); g.moveTo(cx, h * 0.2); g.lineTo(cx + 9, h * 0.45); g.lineTo(cx, h * 0.7); g.lineTo(cx - 9, h * 0.45); g.closePath(); g.fill(); }
+      });
+      TRAD_TEX = { tile, lattice, dancheong };
+      return TRAD_TEX;
+    }
+    // 상자 면 무늬를 칸 수만큼 되풀이: 면 순서 +x, -x, +y, -y, +z, -z (±x 면은 z 방향 nz 칸, ±z 면은 x 방향 nx 칸)
+    function scaleBoxUV(g, nz, nx) { const uv = g.attributes.uv; for (let f = 0; f < 6; f++) { const k = f < 2 ? nz : f >= 4 ? nx : 1; for (let v = 0; v < 4; v++) uv.setX(f * 4 + v, uv.getX(f * 4 + v) * k); } uv.needsUpdate = true; }
+    const hProf = (x) => 0.35 * x + 0.65 * x * x;   // 지붕 단면: 처마(0) → 용마루(1)
+    const unitBox = new T.BoxGeometry(1, 1, 1);
+    function addTraditional(bd, outer, q) {
+      const d = TRAD_DIM[bd.trad] || TRAD_DIM.hall, tex = tradTextures();
+      const { cx, cz, th, L, W } = q.box, lv = q.flat.level;
+      const over = Math.max(d.over[1], Math.min(d.over[2], d.over[0] * W));
+      const Lc = L - over, Wc = W - over, plat = lv + d.plat;
+      const ye0 = plat + d.eave, yr = plat + d.ridge, a = Math.min(W * d.a, L - 0.4), Li = L - a, Wi = W - a;
+      const Ya = hProf(a / W), ym = ye0 + (yr - ye0) * Ya;
+      const yTop = (dist) => ye0 + (yr - ye0) * hProf(Math.max(0, Math.min(W, dist)) / W);   // 처마 끝에서 dist m 안쪽의 지붕 높이 (긴 쪽 가운데)
+      const grp = new T.Group(); grp.position.set(cx, 0, cz); grp.rotation.y = -th;
+      const ct = Math.cos(th), st = Math.sin(th), toW = (x, y, z) => [cx + x * ct - z * st, y, cz + x * st + z * ct];
+      const m4 = new T.Matrix4(), q4 = new T.Quaternion(), v3 = new T.Vector3(), s3 = new T.Vector3(), zAxis = new T.Vector3(0, 0, 1);
+
+      // -- 지붕: 처마 고리(네 면) + 위 맞배(두 면) + 합각(양 끝 세모 벽) + 마루
+      const C = [[-L, -W], [L, -W], [L, W], [-L, W]], I = [[-Li, -Wi], [Li, -Wi], [Li, Wi], [-Li, Wi]], NRM = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+      const NS = HI ? 16 : 10, NT = HI ? 7 : 5, NG = HI ? 7 : 5, e = d.gableOver;
+      const topP = [], topUV = [], topI = [], undP = [], undI = [], rimP = [], rimI = [], gabP = [], gabI = [];
+      const hip = [[], [], [], []], eaveLine = [];
+      const outerAt = (k, s) => {
+        const A = C[k], B = C[(k + 1) % 4], n = NRM[k], len = Math.hypot(B[0] - A[0], B[1] - A[1]), tx = (B[0] - A[0]) / len, tz = (B[1] - A[1]) / len, w = 2 * s - 1;
+        return [A[0] + (B[0] - A[0]) * s + d.flare * w * (n[0] * w + tx), ye0 + d.lift * w * w, A[1] + (B[1] - A[1]) * s + d.flare * w * (n[1] * w + tz)];
+      };
+      for (let k = 0; k < 4; k++) {
+        const A = I[k], B = I[(k + 1) % 4], len = Math.hypot(C[(k + 1) % 4][0] - C[k][0], C[(k + 1) % 4][1] - C[k][1]);
+        const o = topP.length / 3, ou = undP.length / 3;
+        for (let i = 0; i <= NS; i++) {
+          const s = i / NS, O = outerAt(k, s), ix = A[0] + (B[0] - A[0]) * s, iz = A[1] + (B[1] - A[1]) * s;
+          for (let j = 0; j <= NT; j++) {
+            const t = j / NT, x = O[0] + (ix - O[0]) * t, z = O[2] + (iz - O[2]) * t, y = O[1] + (ym - O[1]) * hProf(t * a / W) / Ya;
+            topP.push(x, y, z); topUV.push(s * len / 0.32, t); undP.push(x, y - d.thk, z);
+            if (i === NS) hip[(k + 1) % 4].push([x, y, z]);
+          }
+          eaveLine.push(O);
+          const r = rimP.length / 3; rimP.push(O[0], O[1], O[2], O[0], O[1] - d.thk, O[2]);
+          if (i > 0) rimI.push(r - 2, r, r + 1, r - 2, r + 1, r - 1);
+        }
+        for (let i = 0; i < NS; i++) for (let j = 0; j < NT; j++) {
+          const p0 = o + i * (NT + 1) + j, p1 = p0 + NT + 1, p2 = p1 + 1, p3 = p0 + 1;
+          topI.push(p0, p2, p1, p0, p3, p2);
+          const u0 = ou + i * (NT + 1) + j, u1 = u0 + NT + 1, u2 = u1 + 1, u3 = u0 + 1;
+          undI.push(u0, u1, u2, u0, u2, u3);
+        }
+      }
+      for (const sg of [-1, 1]) {   // 위 맞배 두 면 (앞 -z · 뒤 +z): 처마 고리 안쪽 끝(ym)에서 용마루(yr)까지, 양 끝은 합각 벽보다 e m 더 나와요
+        const o = topP.length / 3;
+        for (let i = 0; i <= 1; i++) {
+          const x = (i ? 1 : -1) * (Li + e);
+          for (let j = 0; j <= NG; j++) { const w = j / NG; topP.push(x, yTop(a + w * Wi), sg * Wi * (1 - w)); topUV.push((x + Li + e) / 0.32, w); }
+        }
+        for (let j = 0; j < NG; j++) { const p0 = o + j, p1 = o + NG + 1 + j, p2 = p1 + 1, p3 = p0 + 1; if (sg < 0) topI.push(p0, p2, p1, p0, p3, p2); else topI.push(p0, p1, p2, p0, p2, p3); }
+      }
+      for (const sx of [-1, 1]) {   // 합각 (양 끝 세모 벽)
+        const o = gabP.length / 3, x = sx * Li;
+        for (let j = 0; j <= NG; j++) { const w = j / NG, y = yTop(a + w * Wi); gabP.push(x, y, -Wi * (1 - w), x, y, Wi * (1 - w)); }
+        for (let j = 0; j < NG; j++) { const l0 = o + 2 * j, r0 = l0 + 1, l1 = l0 + 2, r1 = l0 + 3; if (sx > 0) gabI.push(l0, r1, r0, l0, l1, r1); else gabI.push(l0, r0, r1, l0, r1, l1); }
+      }
+      const mk = (pos, idx, uv) => { const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); if (uv) g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g; };
+      const roofMat = new T.MeshLambertMaterial({ color: 0xffffff, map: tex.tile, side: T.DoubleSide });
+      const roof = new T.Mesh(mk(topP, topI, topUV), roofMat); roof.castShadow = true; roof.receiveShadow = true;
+      const under = new T.Mesh(mk(undP, undI), tradMat(0x5b7a66, 0x2b3a33, { side: T.DoubleSide }));   // 처마 밑 (서까래 단청 빛)
+      const rim = new T.Mesh(mk(rimP, rimI), tradMat(0x43484d, 0x202427, { side: T.DoubleSide }));      // 처마 끝 막새 띠
+      const gable = new T.Mesh(mk(gabP, gabI), tradMat(0x8b4633, 0x46261d, { side: T.DoubleSide })); gable.castShadow = true;
+      // 마루: 용마루 · 추녀마루(모서리) · 내림마루(맞배 끝), 용마루 양 끝 장식
+      const seg = [];
+      const chain = (pts, w) => { for (let i = 0; i + 1 < pts.length; i++) seg.push([pts[i], pts[i + 1], w]); };
+      chain([[-(Li + e), yr + d.ridgeW * 0.35, 0], [Li + e, yr + d.ridgeW * 0.35, 0]], d.ridgeW);
+      for (let k = 0; k < 4; k++) chain(hip[k].map(([x, y, z]) => [x, y + d.ridgeW * 0.22, z]), d.ridgeW * 0.6);
+      for (const sx of [-1, 1]) for (const sg of [-1, 1]) { const pts = []; for (let j = 0; j <= NG; j++) { const w = j / NG; pts.push([sx * (Li + e), yTop(a + w * Wi) + d.ridgeW * 0.2, sg * Wi * (1 - w)]); } chain(pts, d.ridgeW * 0.5); }
+      const ridges = new T.InstancedMesh(unitBox, tradMat(0x3c4146, 0x1d2125), seg.length + 2);
+      seg.forEach(([p, r, w], i) => {
+        v3.set(r[0] - p[0], r[1] - p[1], r[2] - p[2]); const len = v3.length(); v3.normalize();
+        q4.setFromUnitVectors(zAxis, v3); m4.compose(s3.set((p[0] + r[0]) / 2, (p[1] + r[1]) / 2, (p[2] + r[2]) / 2), q4, new T.Vector3(w, w * 0.8, len + w * 0.3)); ridges.setMatrixAt(i, m4);
+      });
+      [-1, 1].forEach((sx, i) => { q4.identity(); m4.compose(s3.set(sx * (Li + e), yr + d.ridgeW * 0.9, 0), q4, new T.Vector3(d.ridgeW * 0.9, d.ridgeW * 1.8, d.ridgeW * 1.1)); ridges.setMatrixAt(seg.length + i, m4); });
+      ridges.castShadow = true;
+      grp.add(roof, under, rim, gable, ridges);
+
+      // -- 기단 (돌, 땅속 1.5m 까지)
+      const pb = new T.Mesh(new T.BoxGeometry(2 * (Lc + d.platOut), d.plat + 1.5, 2 * (Wc + d.platOut)), tradMat(0xc4bdb0, 0x4c4842));
+      pb.position.set(0, lv - 1.5 + (d.plat + 1.5) / 2, 0); pb.castShadow = true; pb.receiveShadow = true; grp.add(pb);
+      // -- 기둥 (둘레, 칸 너비 약 bay m)
+      const colMat = tradMat(0x8f3b2b, 0x4a2a22);
+      const nu = Math.max(1, Math.round(2 * Lc / d.bay)), nv = Math.max(1, Math.round(2 * Wc / d.bay)), colPts = [];
+      for (let i = 0; i <= nu; i++) for (let j = 0; j <= nv; j++) if (i === 0 || i === nu || j === 0 || j === nv) colPts.push([-Lc + 2 * Lc * i / nu, -Wc + 2 * Wc * j / nv]);
+      const colGeo = new T.CylinderGeometry(d.colR * 0.88, d.colR, d.col, 10); colGeo.translate(0, d.col / 2, 0);
+      const cols = new T.InstancedMesh(colGeo, colMat, colPts.length);
+      colPts.forEach(([x, z], i) => { q4.identity(); m4.compose(s3.set(x, plat, z), q4, v3.set(1, 1, 1)); cols.setMatrixAt(i, m4); });
+      cols.castShadow = true; cols.receiveShadow = true; grp.add(cols);
+      // -- 단청 띠 (기둥 위 공포 자리): 처마 밑면 안쪽에 닿게 높이를 맞춰요 (틈이 안 보이게)
+      const yb = yTop(over - 0.25), bandBot = plat + d.col, bandTop = Math.min(yb - 0.06, Math.max(yb - d.thk + 0.05, plat + d.col + d.band));
+      const bandMat = tradMat(0xffffff, 0x8f9aa2, { map: tex.dancheong });
+      const bandGeo = new T.BoxGeometry(2 * (Lc + 0.25), bandTop - bandBot, 2 * (Wc + 0.25)); scaleBoxUV(bandGeo, (2 * (Wc + 0.25)) / 2.2, (2 * (Lc + 0.25)) / 2.2);
+      const band = new T.Mesh(bandGeo, bandMat); band.position.set(0, (bandTop + bandBot) / 2, 0); band.castShadow = true; band.receiveShadow = true; grp.add(band);
+      let wallMat = bandMat, body = band;
+      if (d.walls) {   // 법당: 기둥 사이를 문살 벽으로
+        wallMat = new T.MeshLambertMaterial({ color: 0xffffff, map: tex.lattice });
+        const wg = new T.BoxGeometry(2 * (Lc - 0.08), d.col, 2 * (Wc - 0.08)); scaleBoxUV(wg, nv, nu);
+        const wm = new T.Mesh(wg, wallMat); wm.position.set(0, plat + d.col / 2, 0); wm.castShadow = true; wm.receiveShadow = true; grp.add(wm); body = wm;
+      } else {         // 종각: 벽 없이, 가운데 들보에 청동 종
+        const beam = new T.Mesh(new T.BoxGeometry(2 * Lc, 0.22, 0.22), colMat); beam.position.set(0, bandBot - 0.12, 0); grp.add(beam);
+        const bh = Math.min(1.6, d.col * 0.5), br = bh * 0.38;
+        const prof = [[0, 0], [br * 0.98, 0], [br, bh * 0.06], [br * 0.9, bh * 0.25], [br * 0.78, bh * 0.6], [br * 0.72, bh * 0.88], [br * 0.45, bh], [0, bh]].map(([x, y]) => new T.Vector2(x, y));
+        const bell = new T.Mesh(new T.LatheGeometry(prof, 16), tradMat(0x7d6844, 0x3f3423)); bell.position.set(0, bandBot - 0.24 - bh, 0); bell.castShadow = true; grp.add(bell);
+      }
+      scene.add(grp);
+      for (let i = 0; i + 1 < eaveLine.length; i++) edgePos.push(...toW(...eaveLine[i]), ...toW(...eaveLine[i + 1]));
+      const c = centroid(outer), A = Math.abs(area(outer));
+      buildings.push({ id: bd.id, name: bd.name || '', bg: false, outer, c, A, top: yr + d.ridgeW, mesh: roof, wall: wallMat, roof: roofMat, alt: false, lit: false, trad: bd.trad, occ: [roof, body, pb], group: grp });
+    }
     for (const bd of campus.buildings || []) {
       const outer = ringPts(bd.outer); if (outer.length < 3) continue;
+      const tq = bd.trad ? tradSites.find((q) => q.b === bd) : null;
+      if (tq) { addTraditional(bd, outer, tq); continue; }
       const holes = (bd.holes || []).map(ringPts).filter((h) => h.length >= 3);
       const g0 = bd.g0 ?? hAt(...centroid(outer)), g1 = bd.g1 ?? g0;
-      const base = g0 - 1.5, top = (g0 + g1) / 2 + bd.h;
+      const base = Math.min(g0, groundLow(outer)) - 1.5, top = (g0 + g1) / 2 + bd.h;
       const shape = new T.Shape(outer.map(([x, z]) => new T.Vector2(x, -z)));
       for (const h of holes) shape.holes.push(new T.Path(h.map(([x, z]) => new T.Vector2(x, -z))));
       const geo = new T.ExtrudeGeometry(shape, { depth: top - base, bevelEnabled: false });
@@ -778,6 +1032,26 @@
     crowns.count = trunks.count = treePts.length; crowns.castShadow = true; trunks.castShadow = true;
     crowns.receiveShadow = true;
     scene.add(crowns, trunks);
+
+    // ---- 축구 골대 (흰 기둥 + 흐린 그물), 운동장 고른 높이에 세워요. 기둥은 실제(12cm)보다 조금 굵게
+    const goalMat = tradMat(0xffffff, 0x9aa5ad), netMat = tradMat(0xffffff, 0x8d989f, { transparent: true, opacity: 0.32, side: T.DoubleSide, depthWrite: false });
+    let goalCount = 0;
+    for (const sf of soccerFields) {
+      const { PL, k } = soccerDims(sf.box), y0 = sf.flat.level, Wg = 3.66 * k, Hg = 2.44 * k, Dg = 1.9 * k, PT = 0.22;
+      for (const sgn of [-1, 1]) {
+        const g = new T.Group();   // 이 안에서 +x = 운동장 바깥쪽(골대 뒤), z = 골라인 방향
+        const bar = (w, h, dd, x, y, z) => { const m = new T.Mesh(new T.BoxGeometry(w, h, dd), goalMat); m.position.set(x, y, z); m.castShadow = true; g.add(m); };
+        bar(PT, Hg, PT, 0, Hg / 2, -Wg); bar(PT, Hg, PT, 0, Hg / 2, Wg); bar(PT, PT, 2 * Wg + PT, 0, Hg, 0);
+        bar(PT * 0.7, PT * 0.7, 2 * Wg, Dg, 0.08, 0);
+        const net = (w, h, x, y, z, rx, ry) => { const m = new T.Mesh(new T.PlaneGeometry(w, h), netMat); m.position.set(x, y, z); m.rotation.set(rx, ry, 0); g.add(m); };
+        net(2 * Wg, Hg, Dg, Hg / 2, 0, 0, Math.PI / 2);
+        net(Dg, 2 * Wg, Dg / 2, Hg, 0, -Math.PI / 2, 0);
+        net(Dg, Hg, Dg / 2, Hg / 2, -Wg, 0, 0); net(Dg, Hg, Dg / 2, Hg / 2, Wg, 0, 0);
+        g.position.set(sf.box.cx + Math.cos(sf.box.th) * sgn * PL, y0, sf.box.cz + Math.sin(sf.box.th) * sgn * PL);
+        g.rotation.y = -sf.box.th + (sgn > 0 ? 0 : Math.PI);
+        scene.add(g); goalCount++;
+      }
+    }
 
     // ---- 이름표
     const labels = [];
@@ -986,7 +1260,7 @@
     const bv = new T.Vector3();
     // 건물 뒤에 가린 학생인지 (0.25초마다 한 번씩 봐요): 잡담 말풍선은 숨기고, 냄새 반응은 흐리게 보여요
     const occRay = new T.Raycaster(), occDir = new T.Vector3(), headP = new T.Vector3();
-    const bldObjs = buildings.map((b) => b.mesh);
+    const bldObjs = buildings.flatMap((b) => b.occ || [b.mesh]);
     function behindBuilding(x, y, z) {
       headP.set(x, y, z); occDir.subVectors(headP, camera.position);
       const L = occDir.length(); if (L < 1) return false;
@@ -1035,12 +1309,14 @@
       setEditing(on) { editing = !!on; wrap.classList.toggle('m3-edit', editing); },
       viewHome() { userMoved = false; goHome(); },
       viewTop() { userMoved = true; setView(Math.PI / 2, 0.0001, span * 1.18, homeT[0], homeT[1]); },
+      // (x, z) 땅 위를 dist m 떨어져서 봐요. theta = 돌린 각, phi = 기운 각 (0 = 바로 위). 사진 찍기 · 시험용
+      viewAt(x, z, dist, theta, phi) { userMoved = true; setView(theta ?? HOME.theta, Math.max(0.0001, Math.min(controls.maxPolarAngle, phi ?? HOME.phi)), Math.max(controls.minDistance, Math.min(controls.maxDistance, dist ?? 200)), x, z); },
       focus(id) {
         const s = sensors.get(id); if (!s) return;
         userMoved = true; stopCoasting();
         const off = new T.Vector3().subVectors(camera.position, controls.target);
         off.setLength(Math.min(off.length(), 320));
-        controls.target.set(s.site.x, s.baseY, s.site.z);
+        controls.target.set(s.site.x, s.baseY, s.site.z); lastTX = s.site.x; lastTZ = s.site.z;
         camera.position.copy(controls.target).add(off); controls.update();
       },
       setAutoRotate(on) { controls.autoRotate = !!on; controls.autoRotateSpeed = 0.5; if (on) userMoved = true; },
@@ -1053,7 +1329,8 @@
       tints: () => buildings.filter((b) => b.tint).map((b) => ({ id: b.id, name: b.name, tint: b.tint, wall: '#' + b.wall.color.getHexString(), roof: '#' + b.roof.color.getHexString() })),
       stats: () => ({ buildings: buildings.length, trees: treePts.length, roads: (campus.roads || []).length, areas: (campus.areas || []).length, tex: TEX, shadow: SM,
                       quality: QUALITY, gpuSoft: SOFT, pixelRatio: prNow, pixelRatioMax: PR_MAX, groundStep: GS, roadVerts: roadLayer.verts, edgeSegs: edgePos.length / 6, windowTex: WT,
-                      students: crowd ? crowd.count : 0 }),
+                      students: crowd ? crowd.count : 0, traditional: buildings.filter((b) => b.trad).map((b) => b.name + ':' + b.trad), goals: goalCount,
+                      flats: FLATS.map((f) => ({ kind: f.kind, name: f.name, level: +f.level.toFixed(2) })) }),
       // 학생 캐릭터 켜고 끄기 · 상태
       setStudents(on) {
         studentsOn = !!on && !!crowd; stuGroup.visible = studentsOn;
@@ -1090,7 +1367,7 @@
       }
       for (const b of buildings) {
         const st = want.get(b) || null;
-        const wallC = new T.Color(b.bg ? pal.wallBg : pal.wall), roofC = new T.Color(b.bg ? pal.roofBg : (b.alt ? pal.roofAlt : pal.roof));
+        const wallC = new T.Color(b.trad ? pal.tradWall : b.bg ? pal.wallBg : pal.wall), roofC = new T.Color(b.trad ? pal.tradRoof : b.bg ? pal.roofBg : (b.alt ? pal.roofAlt : pal.roof));
         if (st) {
           const col = colorFor(st);
           b.wall.color.copy(wallC.lerp(col, 0.6)); b.roof.color.copy(roofC.lerp(col, 0.85));
@@ -1111,7 +1388,8 @@
       roadLayer.colorize(p);
       if (texDay) texDay.dispose(); if (texLit) texLit.dispose();
       texDay = windowTexture(p, false); texLit = p.litTop ? windowTexture(p, true) : null;
-      for (const b of buildings) { b.wall.map = (texLit && b.lit && !b.bg) ? texLit : texDay; b.wall.needsUpdate = true; }
+      for (const b of buildings) { if (b.trad) continue; b.wall.map = (texLit && b.lit && !b.bg) ? texLit : texDay; b.wall.needsUpdate = true; }
+      for (const m of tradMats) m.mat.color.set(p === PALETTE.night ? m.night : m.day);
       edgeMat.color.set(p.edge); edgeMat.opacity = p.edgeOp;
       boxMat.color.set(p.box);
       trunks.material.color.set(p.trunk);
@@ -1251,6 +1529,7 @@
     function sensorHit(e) { setRay(e); const hits = ray.intersectObjects(sensorGroup.children, true); return hits.length ? hits[0].object.userData.id : null; }
     renderer.domElement.addEventListener('pointerdown', (e) => {
       down = { x: e.clientX, y: e.clientY };
+      if (e.button === 0) wrap.classList.add('m3-grabbing');
       if (!editing) return;
       const id = sensorHit(e);
       if (id) { dragging = id; controls.enabled = false; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) { /* 일부 브라우저 */ } }
@@ -1274,6 +1553,7 @@
       return true;
     };
     renderer.domElement.addEventListener('pointerup', (e) => {
+      wrap.classList.remove('m3-grabbing');
       if (endDrag()) return;
       if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6 && !editing) {
         const id = sensorHit(e);
@@ -1281,7 +1561,7 @@
       }
       down = null;
     });
-    renderer.domElement.addEventListener('pointercancel', endDrag);
+    renderer.domElement.addEventListener('pointercancel', () => { wrap.classList.remove('m3-grabbing'); endDrag(); });
     return api;
   }
 
