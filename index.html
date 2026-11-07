@@ -121,6 +121,13 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
 @keyframes beacon { 0% { box-shadow: 0 0 0 0 var(--c), 0 2px 8px rgba(0, 0, 0, .28); } 100% { box-shadow: 0 0 0 14px transparent, 0 2px 8px rgba(0, 0, 0, .28); } }
 @media (prefers-reduced-motion: reduce) { .m3-sl.alert { animation: none; } }
 .m3-edit canvas { cursor: crosshair; }
+/* 학생 캐릭터(꾸밈용 가상 인물) 말풍선 */
+.m3-say { position: absolute; left: 0; top: 0; pointer-events: none; padding: 2px 9px; border-radius: 10px; background: rgba(255, 255, 255, .95); color: #1d2a33;
+          font: 700 12px/1.5 var(--f-body); white-space: nowrap; border: 1px solid rgba(0, 0, 0, .14); box-shadow: 0 2px 6px rgba(0, 0, 0, .2); will-change: transform; }
+.m3-say::after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -6px; border: 6px solid transparent; border-bottom: 0; border-top-color: rgba(255, 255, 255, .95); }
+.m3-say.smell { background: #fff1e6; color: #8a2a12; border-color: #e8875f; font-size: 12.5px; }
+.m3-say.smell::after { border-top-color: #fff1e6; }
+.m3-say.behind { opacity: .5; }   /* 건물 뒤에 가린 학생의 반응 */
 </style>
 </head>
 <body>
@@ -138,6 +145,7 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
       <button id="btnHome" type="button">기본 보기</button>
       <button id="btnTop" type="button">위에서 보기</button>
       <button id="btnSpin" type="button">천천히 돌기</button>
+      <button id="btnStudents" type="button" aria-pressed="false" title="길을 걷는 학생 캐릭터(꾸밈용)를 켜고 꺼요">학생 캐릭터</button>
       <button id="btnEdit" type="button">핀 위치 옮기기</button>
       <button id="btnSwitch" type="button" hidden>예시로 보기</button>
     </div>
@@ -151,7 +159,7 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
       <span class="small" id="editMsg" role="status"></span>
     </div>
     <div class="editbar" id="jsonbox" hidden><textarea id="jsonText" readonly aria-label="sites.json에 붙여 넣을 위치"></textarea></div>
-    <div class="mapfoot"><span id="attrib">건물·길 © OpenStreetMap 기여자 (ODbL) · 고도 AWS Terrain Tiles (SRTM 기반)</span><span>건물 모양은 지도 자료로 만든 모형이라 실제 사진과 달라요</span></div>
+    <div class="mapfoot"><span id="attrib">건물·길 © OpenStreetMap 기여자 (ODbL) · 고도 AWS Terrain Tiles (SRTM 기반)</span><span>건물 모양은 지도 자료로 만든 모형이라 실제 사진과 달라요</span><span id="npcNote">걷는 학생은 꾸밈용 가상 캐릭터예요 · 실제 사람의 위치가 아니에요</span></div>
   </div>
 
   <div class="side">
@@ -180,6 +188,7 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
       <li>먼지 값은 센서 출력 전압(mV)이고, 가스 값은 0~1023 숫자예요. 니코틴 양 · 확률 · 정확한 미세먼지(PM2.5) 농도가 아니에요.</li>
       <li>30초 넘게 값이 안 오면 회색 '수신 없음'으로 바꿔요. 값이 없을 때 초록으로 두지 않아요.</li>
       <li>장치를 켜거나 다시 연결하면 4분(예열 3분 + 평소 재기 1분) 동안 '기준 측정 전'이에요.</li>
+      <li>지도 위를 걷는 학생은 화면을 꾸미는 가상 캐릭터예요. 실제 사람의 위치가 아니고, 냄새를 잰 것도 아니에요. '흡연 의심' 센서 둘레에 들어가면 "아 담배 냄새!" 하고 코를 막고 피해 가서 판단 결과를 눈에 띄게 보여 줄 뿐이에요 (판단 보류 · 공기 변화에는 반응하지 않아요). 지도 위 '학생 캐릭터' 단추로 끌 수 있어요.</li>
     </ul>
   </section>
   <section class="card">
@@ -401,6 +410,12 @@ function currentStatus() {
 
 // ---------------------------------------------------------------- 3D 지도
 let map = null;
+// 학생 캐릭터(꾸밈용): 처음에는 켜 두고, 움직임 줄이기를 켠 기기에서는 꺼 둬요. 고른 값은 이 브라우저에 남겨요
+const reduceMotion = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+function studentsWanted() { const v = store('airfaro.students'); return v === '1' ? true : v === '0' ? false : !reduceMotion(); }
+function showStudents() { const b = $('btnStudents'), on = !!map && map.studentsOn(); b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); $('npcNote').hidden = !on; }
+// 그림 품질: 주소 끝에 ?quality=high 또는 ?quality=low 를 붙이면 그대로, 없으면 기기에 맞춰 골라요
+const QUALITY = (() => { try { const q = new URLSearchParams(location.search).get('quality'); return q === 'high' || q === 'low' ? q : null; } catch (e) { return null; } })();
 const isNight = () => { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
 function startMap() {
   const box = $('view3d');
@@ -408,8 +423,9 @@ function startMap() {
     if (!window.THREE || !window.THREE.OrbitControls) throw new Error('3D 그리기 도구(three.js)를 불러오지 못했어요. 인터넷 연결을 확인해 주세요');
     if (!window.CAMPUS) throw new Error('캠퍼스 자료(campus-data.js)를 불러오지 못했어요');
     map = window.AirfaroMap3D.create(box, window.CAMPUS, { stateColors: HEX, stateNames: Object.fromEntries(Object.entries(STATES).map(([k, v]) => [k, v[0]])),
-                                                        night: isNight(), homeTarget: [-35, -5], homeDist: 520 });
+                                                        night: isNight(), homeTarget: [-35, -5], homeDist: 520, quality: QUALITY, students: studentsWanted() });
   } catch (e) {
+    $('btnStudents').hidden = true; $('npcNote').hidden = true;
     box.innerHTML = `<div class="nogl"><div><b>3D 지도를 그리지 못했어요.</b><br>${esc(e.message)}<br>아래 목록과 기록은 그대로 볼 수 있어요.</div></div>`;
     map = null; return;
   }
@@ -422,6 +438,8 @@ function startMap() {
     refresh();
   };
   map.setSites(sitesConfig());
+  $('btnStudents').hidden = !map.students().count;
+  showStudents();
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => map.setTheme(isNight()));
   new MutationObserver(() => map.setTheme(isNight())).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   if (window.CAMPUS.attribution) $('attrib').textContent = window.CAMPUS.attribution;
@@ -601,6 +619,7 @@ function init() {
   $('btnHome').onclick = () => map && map.viewHome();
   $('btnTop').onclick = () => map && map.viewTop();
   $('btnSpin').onclick = () => { if (!map) return; const on = !$('btnSpin').classList.contains('on'); $('btnSpin').classList.toggle('on', on); map.setAutoRotate(on); };
+  $('btnStudents').onclick = () => { if (!map) return; const on = !map.studentsOn(); map.setStudents(on); store('airfaro.students', on ? '1' : '0'); showStudents(); };
   exampleStart();
   setMode('example');
   startMap();

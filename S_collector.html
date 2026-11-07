@@ -240,6 +240,7 @@ const store = { real: [], example: [] };
 let mode = null, seq = 0, lastArrival = 0, savedReal = 0, connectedAt = 0;
 const outbox = [];
 let sent = 0, failures = 0, sending = false, retryTimer = null, lastErr = '';
+const SEND_WAIT_MS = 15000;   // 서버가 15초 안에 답하지 않으면 실패로 세고 다시 보내요 (같은 줄은 session · seq로 가려요)
 
 const iso = (ms) => new Date(ms).toISOString();
 const kst = (ms) => new Date(ms + 9 * 3600e3).toISOString().replace('T', ' ').slice(0, 19);
@@ -276,14 +277,18 @@ async function pump() {
       const body = JSON.stringify({ site_id: r.site, mode: r.mode, session: SESSION, seq: r.seq, received_at: iso(r.t),
                                     dust: r.dust, gas: r.gas, humidity: r.humidity });
       let ok = false;
+      const stop = new AbortController();
+      const timer = setTimeout(() => stop.abort(), SEND_WAIT_MS);
       try {
-        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: stop.signal });
         ok = res.ok;
         if (!ok) lastErr = 'HTTP ' + res.status;
-      } catch (e) { lastErr = '연결 실패'; }
+      } catch (e) { lastErr = stop.signal.aborted ? '15초 동안 응답 없음' : '연결 실패'; }
+      clearTimeout(timer);
       if (!ok) { failures++; break; }
       outbox.shift();
       sent++;
+      lastErr = '';
     }
   } finally { sending = false; }
   if (outbox.length && serverUrl() && !retryTimer) {
@@ -478,7 +483,7 @@ function render() {
 function renderServer() {
   const url = serverUrl();
   $('srv').textContent = !url ? '끔' : `보냄 ${sent}줄 · 대기 ${outbox.length}줄` +
-    (outbox.length && failures ? ` · 실패 ${failures}번 (${lastErr}, 5초 뒤 다시)` : '');
+    (outbox.length && lastErr ? ` · 실패 ${failures}번 (${lastErr}, 5초 뒤 다시)` : '');
 }
 
 // ---------------------------------------------------------------- 시작

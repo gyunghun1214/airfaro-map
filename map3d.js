@@ -1,7 +1,10 @@
 // AIRFARO MAP 3D 캠퍼스 (map3d.js) · three.js r147 (vendor/three.min.js, vendor/OrbitControls.js)
 // campus-data.js 의 실제 건물 · 길 · 풀밭 윤곽과 땅 높낮이(미터, x = 동쪽, z = 남쪽)로 캠퍼스를 3D로 세워요.
-// 땅 그림(길 · 풀밭 · 주차장)은 캔버스에 그려 지형에 덮고, 건물은 윤곽을 올려 세워요.
+// 땅 그림(풀밭 · 주차장 등)은 캔버스에 그려 지형에 덮고, 길은 도형으로 따로 올려 가까이 봐도 또렷해요.
+// 건물은 윤곽을 올려 세우고 테두리 선 · 옥상 난간 · 창문 무늬를 그려요. 빠른 컴퓨터에서는 화면을 더 촘촘하게(최대 2배) 그려요.
 // 센서 지점마다 바닥 원과 기둥을 세워 웹 판단 상태 색으로 칠하고, 흡연 의심 · 판단 보류 · 공기 변화이면 이어진 건물도 같은 색으로 물들여요.
+// 학생 캐릭터(꾸밈용 가상 인물)는 캠퍼스 안 길을 걸어 다니다, 흡연 의심 센서 둘레에 처음 들어가면 "아 담배 냄새!" 하고 코를 막고 피해 가요.
+// 실제 사람의 위치나 냄새를 잰 것이 아니에요.
 (function (root) {
   'use strict';
   const T = root.THREE;
@@ -12,13 +15,18 @@
            parking: '#a6a9a6', plaza: '#d8d2c3', water: '#7fb7cf', road: '#4d5256', curb: '#dcd9d0', line: '#f2f1ea', path: '#e4dfd2', pathEdge: '#c2bba9', steps: '#cfc8b7',
            wall: 0xeef0ec, wallBg: 0xcfd2cd, roof: 0x86a48f, roofAlt: 0xb3bab2, roofBg: 0xa9ada7, box: 0xe3e6e3,
            tree: 0x3f7a30, treeAlt: 0x5a9442, trunk: 0x6b5a45, hemiSky: 0xffffff, hemiGround: 0x7d8278, hemi: 0.58, sun: 0.72,
-           window: 'rgba(110,140,162,0.55)', windowLit: null },
+           edge: 0x56626c, edgeOp: 0.3,
+           window: 'rgba(110,140,162,0.55)', windowLit: null,
+           glassTop: 'rgba(172,198,216,0.85)', glassBot: 'rgba(94,126,150,0.85)', frame: 'rgba(64,76,88,0.32)', mullion: 'rgba(255,255,255,0.6)', litTop: null, litBot: null },
     night: { sky: 0x0d1921, fog: 0x0d1921, skirt: '#38332d', skirtDark: '#29251f',
              ground: '#2a343b', urban: '#262f35', campus: '#303c43', grass: '#2b4f35', wood: '#22412c', pitch: '#2e5a37', pitchLine: '#6a8a72',
              parking: '#323b41', plaza: '#454b4b', water: '#24485b', road: '#161b1f', curb: '#4d585e', line: '#8a949a', path: '#4a5255', pathEdge: '#394045', steps: '#525a5c',
              wall: 0x75858f, wallBg: 0x48535a, roof: 0x4b665f, roofAlt: 0x5a6867, roofBg: 0x3b454b, box: 0x75828a,
              tree: 0x2d5636, treeAlt: 0x3a6540, trunk: 0x3a3229, hemiSky: 0xb3c5d6, hemiGround: 0x1d252a, hemi: 0.78, sun: 0.42,
-             window: 'rgba(38,52,62,0.9)', windowLit: 'rgba(255,212,140,0.9)' },
+             edge: 0x070d11, edgeOp: 0.5,
+             window: 'rgba(38,52,62,0.9)', windowLit: 'rgba(255,212,140,0.9)',
+             glassTop: 'rgba(46,62,74,0.95)', glassBot: 'rgba(30,42,52,0.95)', frame: 'rgba(0,0,0,0.35)', mullion: 'rgba(84,98,108,0.7)',
+             litTop: 'rgba(255,228,170,0.95)', litBot: 'rgba(240,184,104,0.95)' },
   };
   const ALERT = { SMOKE: 1, HOLD: 1, CHANGED: 1 };     // 이 상태일 때만 건물 · 바닥 색을 바꿔요
   const RANK = { SMOKE: 3, HOLD: 2, CHANGED: 1 };
@@ -42,17 +50,337 @@
     }
     return c;
   }
+  // 점 p 에서 선분 ab 까지: 거리 d 와 가장 가까운 자리 t (0~1)
+  function segInfo(p, a, b) {
+    const dx = b[0] - a[0], dz = b[1] - a[1], L = dx * dx + dz * dz;
+    let t = L ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / L : 0; t = Math.max(0, Math.min(1, t));
+    return { d: Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dz), t };
+  }
+  // 두 선분 사이 가장 가까운 거리 (서로 가로지르면 0)
+  function segSeg(a, b, c, d) {
+    const o = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+    const d1 = o(a, b, c), d2 = o(a, b, d), d3 = o(c, d, a), d4 = o(c, d, b);
+    if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return 0;
+    return Math.min(segInfo(a, c, d).d, segInfo(b, c, d).d, segInfo(c, a, b).d, segInfo(d, a, b).d);
+  }
   function distToRing(pt, pts) {
     let best = Infinity;
-    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-      const [ax, az] = pts[j], [bx, bz] = pts[i];
-      const dx = bx - ax, dz = bz - az, L = dx * dx + dz * dz;
-      let t = L ? ((pt[0] - ax) * dx + (pt[1] - az) * dz) / L : 0; t = Math.max(0, Math.min(1, t));
-      best = Math.min(best, Math.hypot(pt[0] - ax - t * dx, pt[1] - az - t * dz));
-    }
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) best = Math.min(best, segInfo(pt, pts[j], pts[i]).d);
     return best;
   }
+  const bbox = (pts) => pts.reduce((m, q) => [Math.min(m[0], q[0]), Math.min(m[1], q[1]), Math.max(m[2], q[0]), Math.max(m[3], q[1])], [1e9, 1e9, -1e9, -1e9]);
+  const angDiff = (a, b) => { let d = (a - b) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // ---------------------------------------------------------------- 학생이 걷는 길 (campus.roads → 마디 · 이음)
+  // 캠퍼스 안(경계 + near m)의 보행로 · 계단 · 광장 · 캠퍼스 안 찻길만 써요. 큰 바깥 도로(primary · secondary)는 빼요.
+  // 다른 길 끝이 이 길 가운데에 닿으면(T자) 그 자리에서 나누고, 건물 속을 지나는 조각은 빼요. 가장 큰 덩어리 하나만 남겨요.
+  const WALK_KINDS = { footway: 1, path: 1, steps: 1, pedestrian: 1, service: 1, residential: 1, cycleway: 1, living_street: 1 };
+  function buildWalkGraph(campus, o) {
+    o = o || {};
+    const near = o.near ?? 10, snap = o.snap ?? 1.2;
+    const camp = ringPts(campus.campus);
+    const blds = (campus.buildings || []).map((b) => ringPts(b.outer)).filter((r) => r.length >= 3).map((r) => ({ r, bb: bbox(r) }));
+    const inBld = (p) => blds.some((b) => p[0] > b.bb[0] && p[0] < b.bb[2] && p[1] > b.bb[1] && p[1] < b.bb[3] && inside(p, b.r));
+    const clearSeg = (a, b) => {   // 이 조각에서 가장 가까운 건물 벽까지 (9m 넘으면 9)
+      const x0 = Math.min(a[0], b[0]) - 9, x1 = Math.max(a[0], b[0]) + 9, z0 = Math.min(a[1], b[1]) - 9, z1 = Math.max(a[1], b[1]) + 9;
+      let best = 9;
+      for (const B of blds) {
+        if (B.bb[2] < x0 || B.bb[0] > x1 || B.bb[3] < z0 || B.bb[1] > z1) continue;
+        for (let i = 0, j = B.r.length - 1; i < B.r.length; j = i++) best = Math.min(best, segSeg(a, b, B.r[j], B.r[i]));
+      }
+      return best;
+    };
+    const onCampus = (p) => camp.length < 3 || inside(p, camp) || distToRing(p, camp) <= near;
+    const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    let segs = [];
+    for (const r of campus.roads || []) {
+      if (!WALK_KINDS[r.k]) continue;
+      const p = ringPts(r.pts);
+      for (let i = 0; i + 1 < p.length; i++) segs.push({ a: p[i], b: p[i + 1], w: r.w });
+    }
+    const ends = []; for (const s of segs) ends.push(s.a, s.b);
+    const split = [];
+    for (const s of segs) {
+      const cuts = [];
+      for (const e of ends) { const q = segInfo(e, s.a, s.b); if (q.d < snap && q.t > 0.02 && q.t < 0.98) cuts.push(q.t); }
+      cuts.sort((x, y) => x - y);
+      let prev = s.a, pt = 0;
+      for (const t of cuts) { if (t - pt < 0.01) continue; const q = lerp(s.a, s.b, t); split.push({ a: prev, b: q, w: s.w }); prev = q; pt = t; }
+      split.push({ a: prev, b: s.b, w: s.w });
+    }
+    const nodes = [], grid = new Map(), edges = [];
+    const nodeOf = (p) => {
+      const gx = Math.round(p[0] / snap), gz = Math.round(p[1] / snap);
+      for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+        const list = grid.get((gx + dx) + ',' + (gz + dz));
+        if (list) for (const i of list) if (Math.hypot(nodes[i].x - p[0], nodes[i].z - p[1]) < snap) return i;
+      }
+      const i = nodes.length; nodes.push({ x: p[0], z: p[1], adj: [] });
+      const k = gx + ',' + gz; if (!grid.has(k)) grid.set(k, []); grid.get(k).push(i);
+      return i;
+    };
+    for (const s of split) {
+      const L = Math.hypot(s.b[0] - s.a[0], s.b[1] - s.a[1]), n = Math.max(1, Math.ceil(L / 1.5));
+      // 벽에 닿거나 가로지르는 조각, 건물 속에 통째로 든 조각(가로지르지 않으니 가운데 한 점만 보면 돼요), 캠퍼스 밖 조각은 빼요
+      const clear = clearSeg(s.a, s.b);
+      let ok = clear >= 0.05 && !inBld(lerp(s.a, s.b, 0.5));
+      for (let i = 0; i <= n && ok; i++) if (!onCampus(lerp(s.a, s.b, i / n))) ok = false;
+      if (!ok) continue;
+      const a = nodeOf(s.a), b = nodeOf(s.b);
+      if (a === b || nodes[a].adj.some((ei) => edges[ei].a === b || edges[ei].b === b)) continue;
+      const ei = edges.length;
+      edges.push({ a, b, L: Math.hypot(nodes[a].x - nodes[b].x, nodes[a].z - nodes[b].z), w: s.w,
+                   lane: Math.max(0, Math.min(0.85, s.w * 0.32, clear - 0.55)) });   // 옆으로 비켜 걸을 수 있는 폭 (건물 벽에서 0.55m 띄워요)
+      nodes[a].adj.push(ei); nodes[b].adj.push(ei);
+    }
+    // 가장 큰 덩어리 (길이 합)
+    const comp = new Int32Array(nodes.length).fill(-1); let best = -1, bestLen = -1;
+    for (let i = 0, c = 0; i < nodes.length; i++) {
+      if (comp[i] >= 0 || !nodes[i].adj.length) continue;
+      let len = 0; const st = [i]; comp[i] = c;
+      while (st.length) { const u = st.pop(); for (const ei of nodes[u].adj) { const e = edges[ei], v = e.a === u ? e.b : e.a; len += e.L / 2; if (comp[v] < 0) { comp[v] = c; st.push(v); } } }
+      if (len > bestLen) { bestLen = len; best = c; }
+      c++;
+    }
+    const map = new Map(), outN = [], outE = [];
+    nodes.forEach((n, i) => { if (comp[i] === best && best >= 0) { map.set(i, outN.length); outN.push({ x: n.x, z: n.z, adj: [] }); } });
+    for (const e of edges) {
+      if (!map.has(e.a)) continue;
+      const a = map.get(e.a), b = map.get(e.b), ei = outE.length;
+      outE.push({ a, b, L: e.L, w: e.w, lane: e.lane }); outN[a].adj.push(ei); outN[b].adj.push(ei);
+    }
+    return { nodes: outN, edges: outE, length: outE.reduce((s, e) => s + e.L, 0) };
+  }
+
+  // ---------------------------------------------------------------- 학생들의 움직임 (그리기와 떼어 낸 순수 계산: Node 에서도 시험해요)
+  // 무작위 목적지를 골라 가장 짧은 길로 걷고, 도착하면 잠깐 멈춰 휴대폰을 보거나 둘러봐요. 걷다 스친 둘은 가끔 멈춰 이야기해요.
+  // zones = 흡연 의심 센서 둘레 [{id, x, z, r}]. 처음 들어간 학생은 "아 담배 냄새!" 하고 1.7초 코를 막은 뒤 그 둘레에서 먼 곳으로 빨리 걸어가요.
+  // 한 번 맡은 구역은 기억해서(그 구역이 없어질 때까지) 목적지로 고르지 않고, 길을 고를 때도 돌아가요.
+  const SKIN = [0xf3d2b3, 0xeac09a, 0xdba77f, 0xc98e66, 0xa8714c, 0x7d5236];
+  const HAIR = [0x1c1a19, 0x1c1a19, 0x2e231c, 0x4a3426, 0x6b4a2f, 0x9c7346, 0xc8a46e, 0x7b3b2a];
+  const SHIRT = [0x2f4a7a, 0xf1f1ec, 0x8c949c, 0x79c3b2, 0xe2b43f, 0xc94b40, 0x6aa3d8, 0xe79fb4, 0x2c2c2e, 0x4e8a5a, 0xf08a4b, 0x9b7fd1];
+  const PANTS = [0x3b5878, 0x2a2a2c, 0xcbb894, 0x6c7177, 0x46566b, 0x8a6f5a];
+  const BAG = [0x33475b, 0x8e44ad, 0xc0582b, 0x22313f, 0x1f8a76, 0x7c8a8c, 0xb83b5e];
+  const SMELL_TEXT = '아 담배 냄새!';
+  const TALK = ['안녕!', '점심 뭐 먹지?', '과제 했어?', '수업 늦겠다!', '오늘 날씨 좋다', '도서관 갈래?', '시험 언제야?'];
+  function makeCrowd(G, o) {
+    o = o || {};
+    const rand = rng(o.seed || 1), pick = (a) => a[Math.floor(rand() * a.length)];
+    const nodes = G.nodes, edges = G.edges, NN = nodes.length;
+    const N = NN >= 2 ? Math.max(0, Math.floor(o.count ?? 40)) : 0;
+    const MAX_SMELL = 4, MAX_TALK = 2, REACT_S = 1.7, SMELL_S = 2.8;
+    const npcs = [];
+    let zones = [], zoneSig = '', zoneEdges = new Map(), time = 0, spawned = false, chatClock = 0;
+    const dist = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz);
+    const edgeBetween = (u, v) => { for (const ei of nodes[u].adj) { const e = edges[ei]; if ((e.a === u && e.b === v) || (e.b === u && e.a === v)) return e; } return null; };
+    function nearestNode(x, z, maxD) {
+      let best = -1, bd = maxD ?? Infinity;
+      for (let i = 0; i < NN; i++) { const d = dist(x, z, nodes[i].x, nodes[i].z); if (d < bd) { bd = d; best = i; } }
+      return best;
+    }
+    function setZones(list) {
+      const sig = list.map((q) => q.id + ':' + q.x + ':' + q.z + ':' + q.r).join('|');
+      if (sig === zoneSig) return;
+      zoneSig = sig; zones = list.map((q) => ({ id: q.id, x: q.x, z: q.z, r: q.r }));
+      zoneEdges = new Map(zones.map((q) => {
+        const s = new Set();
+        edges.forEach((e, i) => { if (segInfo([q.x, q.z], [nodes[e.a].x, nodes[e.a].z], [nodes[e.b].x, nodes[e.b].z]).d < q.r + 6) s.add(i); });
+        return [q.id, s];
+      }));
+      const live = new Set(zones.map((q) => q.id));
+      for (const n of npcs) for (const id of [...n.mem.keys()]) if (!live.has(id)) n.mem.delete(id);   // 없어진 구역은 잊어요
+    }
+    // 가장 짧은 길 (마디 수가 작아 단순한 다익스트라로 충분해요). 기억한 구역 둘레 길은 30배 길게 쳐서 돌아가요
+    function route(from, to, mem) {
+      let pen = null;
+      if (mem && mem.size) { pen = new Set(); for (const id of mem.keys()) { const s = zoneEdges.get(id); if (s) for (const i of s) pen.add(i); } }
+      const D = new Float64Array(NN).fill(Infinity), prev = new Int32Array(NN).fill(-1), done = new Uint8Array(NN);
+      D[from] = 0;
+      for (;;) {
+        let u = -1, best = Infinity;
+        for (let i = 0; i < NN; i++) if (!done[i] && D[i] < best) { best = D[i]; u = i; }
+        if (u < 0 || u === to) break;
+        done[u] = 1;
+        for (const ei of nodes[u].adj) {
+          const e = edges[ei], v = e.a === u ? e.b : e.a, c = best + e.L * (pen && pen.has(ei) ? 30 : 1);
+          if (c < D[v]) { D[v] = c; prev[v] = u; }
+        }
+      }
+      if (!isFinite(D[to])) return null;
+      const out = []; for (let v = to; v >= 0; v = prev[v]) out.push(v);
+      out.reverse();
+      return out[0] === from ? out : null;
+    }
+    const remembered = (n, x, z, pad) => zones.some((q) => n.mem.has(q.id) && dist(x, z, q.x, q.z) < q.r + pad);
+    function pickDest(n, from, flee) {
+      const f = nodes[from];
+      if (flee) {   // 맡은 구역에서 25m 넘게 떨어지고, 너무 멀지 않은 곳
+        let best = -1, score = -Infinity;
+        for (let k = 0; k < 48; k++) {
+          const i = Math.floor(rand() * NN), nd = nodes[i]; if (i === from) continue;
+          let zd = 120; for (const q of zones) if (n.mem.has(q.id)) zd = Math.min(zd, dist(nd.x, nd.z, q.x, q.z) - q.r);
+          if (zd < 25) continue;
+          const sc = Math.min(zd, 90) - dist(f.x, f.z, nd.x, nd.z) * 0.2;
+          if (sc > score) { score = sc; best = i; }
+        }
+        if (best >= 0) return best;
+      }
+      const hs = o.hotspots ? o.hotspots() : [];
+      for (let k = 0; k < 30; k++) {
+        let i;
+        if (hs.length && rand() < 0.28) {   // 센서 둘레(25~75m)도 자주 지나가요
+          const h = pick(hs), near = [];
+          for (let j = 0; j < NN; j++) { const d = dist(nodes[j].x, nodes[j].z, h.x, h.z); if (d > 25 && d < 75) near.push(j); }
+          if (!near.length) continue;
+          i = pick(near);
+        } else i = Math.floor(rand() * NN);
+        const nd = nodes[i], d = dist(f.x, f.z, nd.x, nd.z);
+        if (i === from || d < 30 || d > 450 || remembered(n, nd.x, nd.z, 20)) continue;
+        return i;
+      }
+      return (from + 1 + Math.floor(rand() * (NN - 1))) % NN;
+    }
+    function nearestZone(n) { let b = null, bd = Infinity; for (const q of zones) { const d = dist(n.x, n.z, q.x, q.z) - q.r; if (d < bd) { bd = d; b = q; } } return b; }
+    function plan(n, flee) {
+      let start = n.node, lead = null;
+      if (n.path && n.seg < n.path.length - 1) {   // 길 가운데에 서 있으면: 가까운 쪽(피할 때는 구역 반대쪽) 끝 마디에서 출발
+        const a0 = n.path[n.seg], b = n.path[n.seg + 1];
+        const a = a0.n >= 0 ? a0 : { x: nodes[n.node].x, z: nodes[n.node].z, n: n.node };
+        if (b.n >= 0) {
+          const q = flee ? nearestZone(n) : null;
+          const toB = q ? dist(b.x, b.z, q.x, q.z) >= dist(a.x, a.z, q.x, q.z) : dist(n.x, n.z, b.x, b.z) <= dist(n.x, n.z, a.x, a.z);
+          const end = toB ? b : a;
+          start = end.n; lead = { x: end.x, z: end.z, n: end.n, lane: b.lane };
+        }
+      }
+      const dest = pickDest(n, start, flee);
+      const r = route(start, dest, n.mem);
+      if (!r || r.length < 2) { n.mode = 'idle'; n.t = 1 + rand() * 2; n.path = null; n.fast = false; return; }
+      const pts = [{ x: n.x, z: n.z, n: lead ? -1 : start, lane: 0 }];
+      if (lead && dist(n.x, n.z, lead.x, lead.z) > 0.01) pts.push(lead); else if (lead) pts[0].n = lead.n;
+      for (let k = 1; k < r.length; k++) { const e = edgeBetween(r[k - 1], r[k]); pts.push({ x: nodes[r[k]].x, z: nodes[r[k]].z, n: r[k], lane: e ? e.lane : 0 }); }
+      n.path = pts; n.seg = 0; n.d = 0; n.mode = 'walk'; n.fast = !!flee; n.dest = dest;
+      if (pts[0].n >= 0) n.node = pts[0].n;
+    }
+    // 길을 따라 m 미터 걸어요. 끝에 닿으면 true
+    function advance(n, m) {
+      const P = n.path;
+      while (m > 0 && n.seg < P.length - 1) {
+        const a = P[n.seg], b = P[n.seg + 1], L = dist(a.x, a.z, b.x, b.z), left = L - n.d;
+        if (m < left) { n.d += m; m = 0; } else { m -= left; n.seg++; n.d = 0; if (b.n >= 0) n.node = b.n; }
+      }
+      if (n.seg >= P.length - 1) { const e = P[P.length - 1]; n.x = e.x; n.z = e.z; return true; }
+      const a = P[n.seg], b = P[n.seg + 1], L = dist(a.x, a.z, b.x, b.z) || 1, t = n.d / L;
+      n.x = a.x + (b.x - a.x) * t; n.z = a.z + (b.z - a.z) * t;
+      n.dirx = (b.x - a.x) / L; n.dirz = (b.z - a.z) / L; n.laneMax = b.lane;
+      return false;
+    }
+    function makeLook() {
+      return { skin: pick(SKIN), hair: pick(HAIR), shirt: pick(SHIRT), pants: pick(PANTS), bag: rand() < 0.7 ? pick(BAG) : 0, long: rand() < 0.38 };
+    }
+    function spawn() {
+      spawned = true;
+      const hs = o.hotspots ? o.hotspots() : [];
+      for (let i = 0; i < N; i++) {
+        let node = Math.floor(rand() * NN);
+        if (hs.length && i % 4 === 0) {   // 네 명에 한 명은 센서 둘레(30~80m)에서 시작해요
+          const h = hs[(i / 4 | 0) % hs.length], near = [];
+          for (let j = 0; j < NN; j++) { const d = dist(nodes[j].x, nodes[j].z, h.x, h.z); if (d > 30 && d < 80) near.push(j); }
+          if (near.length) node = pick(near);
+        }
+        const nd = nodes[node];
+        npcs.push({ id: i, x: nd.x, z: nd.z, rx: nd.x, rz: nd.z, ox: 0, oz: 0, h: rand() * Math.PI * 2, node, path: null, seg: 0, d: 0,
+                    dirx: 0, dirz: 1, laneMax: 0, lane: rand() * 2 - 1, mode: 'idle', t: rand() * 2.5, pose: rand() < 0.5 ? 'phone' : 'look',
+                    speed: 1.15 + rand() * 0.45, fast: false, phase: rand() * 6.28, say: null, mem: new Map(), talkCool: rand() * 20,
+                    reacts: 0, face: 0, partner: null, dest: -1, memS: 100 + rand() * 60, look: makeLook() });
+      }
+    }
+    function chats(cnt) {
+      for (let i = 0; i < npcs.length; i++) {
+        const a = npcs[i]; if (a.mode !== 'walk' || a.talkCool > time) continue;
+        for (let j = i + 1; j < npcs.length; j++) {
+          const b = npcs[j]; if (b.mode !== 'walk' || b.talkCool > time) continue;
+          if (Math.abs(a.rx - b.rx) > 2.2 || Math.abs(a.rz - b.rz) > 2.2 || dist(a.rx, a.rz, b.rx, b.rz) > 2.2) continue;
+          a.talkCool = b.talkCool = time + 30 + rand() * 30;
+          if (rand() > 0.35) break;
+          const t = 3 + rand() * 3;
+          a.mode = b.mode = 'chat'; a.t = b.t = t; a.partner = b; b.partner = a;
+          if (cnt.talk < MAX_TALK) { const s = rand() < 0.5 ? a : b; s.say = { text: pick(TALK), kind: 'talk', until: time + Math.min(t, 3.2) }; cnt.talk++; }
+          break;
+        }
+      }
+    }
+    // dt 초만큼 움직여요. vis = 화면에서 키운 배율 (멀리서 보면 학생을 크게 그려요 → 걸음도 그만큼 크게 · 조금 빠르게)
+    function step(dt, vis) {
+      if (!N || !(dt > 0)) return;
+      if (!spawned) spawn();
+      vis = Math.max(1, vis || 1);
+      time += dt;
+      const cnt = { smell: 0, talk: 0 };
+      for (const n of npcs) if (n.say) { if (time > n.say.until) n.say = null; else cnt[n.say.kind]++; }
+      for (const n of npcs) {
+        if (n.mode !== 'react') for (const q of zones) {   // 냄새: 처음 들어간 흡연 의심 구역이면 반응해요
+          const seen = n.mem.get(q.id);
+          if (seen !== undefined) { if (time - seen < n.memS) continue; n.mem.delete(q.id); }
+          if (dist(n.x, n.z, q.x, q.z) > q.r) continue;
+          n.mem.set(q.id, time);
+          if (n.partner) { n.partner.partner = null; n.partner = null; }
+          n.mode = 'react'; n.t = REACT_S; n.fast = false;
+          n.face = Math.atan2(n.x - q.x, n.z - q.z);   // 구역 반대쪽으로 돌아서요
+          if (cnt.smell < MAX_SMELL) { n.say = { text: SMELL_TEXT, kind: 'smell', until: time + SMELL_S }; cnt.smell++; }
+          n.reacts++;
+          break;
+        }
+        if (n.mode === 'walk') {
+          const m = n.speed * (n.fast ? 1.5 : 1) * (1 + 0.3 * (vis - 1)) * dt;
+          const end = advance(n, m);
+          n.phase += m / (0.62 * vis) * Math.PI;
+          if (end) { n.mode = 'idle'; n.t = 2 + rand() * 6; n.pose = rand() < 0.5 ? 'phone' : 'look'; n.fast = false; n.path = null; }
+        } else if (n.mode === 'idle' || n.mode === 'chat') {
+          n.t -= dt;
+          if (n.t <= 0) {
+            const resume = n.mode === 'chat' && n.path && n.seg < n.path.length - 1;
+            if (n.partner && n.partner.partner === n) n.partner.partner = null;
+            n.partner = null;
+            if (resume) n.mode = 'walk'; else plan(n, false);
+          }
+        } else if (n.mode === 'react') {
+          n.t -= dt;
+          if (n.t <= 0) plan(n, true);
+        }
+        let want = n.h;
+        if (n.mode === 'walk') want = Math.atan2(n.dirx, n.dirz);
+        else if (n.mode === 'react') want = n.face;
+        else if (n.mode === 'chat' && n.partner) want = Math.atan2(n.partner.rx - n.rx, n.partner.rz - n.rz);
+        n.h += angDiff(want, n.h) * Math.min(1, dt * 7);
+        if (n.mode === 'walk') {   // 길 가운데만 걷지 않게 옆으로 조금 비켜 걸어요 (길 폭 · 건물 벽까지 거리 안에서)
+          const off = n.lane * n.laneMax, k = Math.min(1, dt * 2.5);
+          n.ox += (-n.dirz * off - n.ox) * k; n.oz += (n.dirx * off - n.oz) * k;
+          const mag = Math.hypot(n.ox, n.oz);
+          if (mag > n.laneMax) { const f = n.laneMax / mag; n.ox *= f; n.oz *= f; }
+        }
+        n.rx = n.x + n.ox; n.rz = n.z + n.oz;
+      }
+      chatClock += dt;
+      if (chatClock >= 0.5) { chatClock = 0; chats(cnt); }
+    }
+    return {
+      get npcs() { if (!spawned && N) spawn(); return npcs; },
+      get count() { return N; },
+      get time() { return time; },
+      get zones() { return zones; },
+      setZones, step, nearestNode, route,
+      // 시험용: i 번 학생을 마디 node 에 세워요 (아무 것도 기억하지 않은 채 오래 서 있게)
+      place(i, node, still) {
+        if (!spawned) spawn();
+        const n = npcs[i], nd = nodes[node]; if (!n || !nd) return false;
+        Object.assign(n, { x: nd.x, z: nd.z, rx: nd.x, rz: nd.z, ox: 0, oz: 0, node, path: null, seg: 0, d: 0, mode: 'idle', t: still ?? 30, say: null, fast: false, partner: null });
+        n.mem.clear();
+        return true;
+      },
+    };
+  }
 
   // ---------------------------------------------------------------- 지도 만들기
   function create(container, campus, opts) {
@@ -63,22 +391,45 @@
 
     const wrap = document.createElement('div'); wrap.className = 'm3-wrap'; container.appendChild(wrap);
     const renderer = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: !!opts.preserve });
-    renderer.setPixelRatio(Math.min(2, root.devicePixelRatio || 1));
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
+    // 그림자는 거의 움직이지 않아요(해 · 건물 · 나무는 그대로, 센서 머리만 살짝 출렁): 그림자 지도는 0.1초에 한 번만 새로 그려요 (핀을 옮기면 바로)
+    renderer.shadowMap.autoUpdate = false;
+    let shadowAt = -1e9;
     wrap.appendChild(renderer.domElement);
     renderer.domElement.setAttribute('aria-label', (campus.name || '캠퍼스') + ' 3D 지도');
     const overlay = document.createElement('div'); overlay.className = 'm3-labels'; wrap.appendChild(overlay);
 
+    // ---- 그림 품질: 휴대폰(좁은 화면)이나 그래픽 칩 없이 그리는 컴퓨터(소프트웨어 WebGL)는 가볍게, 나머지는 촘촘하게
+    const SMALL = (root.innerWidth || 1000) <= 700;
+    const gpu = (() => {
+      try {
+        const gl = renderer.getContext(); let r = String(gl.getParameter(gl.RENDERER) || '');
+        if (!r || /webkit webgl/i.test(r)) { const ext = gl.getExtension('WEBGL_debug_renderer_info'); if (ext) r = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || r); }
+        return r;
+      } catch (e) { return ''; }
+    })();
+    const SOFT = /swiftshader|llvmpipe|softpipe|software|basic render/i.test(gpu);
+    const QUALITY = opts.quality === 'high' || opts.quality === 'low' ? opts.quality : (SMALL || SOFT ? 'low' : 'high');
+    const HI = QUALITY === 'high';
+    // 화면 촘촘함: 처음에는 기기 그대로(최대 2배), 빠르게 그려지면 0.25씩 올리고(최대 2배) 느려지면 내려요
+    const DPR = root.devicePixelRatio || 1;
+    let prNow = Math.min(2, DPR);
+    const PR_MAX = Math.min(2, Math.max(HI ? 1.5 : 1, DPR));
+    renderer.setPixelRatio(prNow);
+    const ANISO = Math.min(16, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+
     const R = campus.rect, W = R.x1 - R.x0, D = R.z1 - R.z0, CX = (R.x0 + R.x1) / 2, CZ = (R.z0 + R.z1) / 2;
     const span = Math.max(W, D);
     const TR = campus.terrain;
+    // 땅 높이: 10m 간격 고도를 부드러운 곡선(Catmull-Rom)으로 이어요 → 비탈이 10m 마다 꺾이지 않아요
     function hAt(x, z) {
       if (!TR) return 0;
       const gx = (x - TR.x0) / TR.step, gz = (z - TR.z0) / TR.step;
-      const i = Math.max(0, Math.min(TR.nx - 2, Math.floor(gx))), j = Math.max(0, Math.min(TR.nz - 2, Math.floor(gz)));
-      const fx = Math.max(0, Math.min(1, gx - i)), fz = Math.max(0, Math.min(1, gz - j));
-      const g = (a, b) => TR.h[b * TR.nx + a];
-      return g(i, j) * (1 - fx) * (1 - fz) + g(i + 1, j) * fx * (1 - fz) + g(i, j + 1) * (1 - fx) * fz + g(i + 1, j + 1) * fx * fz;
+      const i = Math.floor(gx), j = Math.floor(gz), fx = gx - i, fz = gz - j;
+      const g = (a, b) => TR.h[Math.max(0, Math.min(TR.nz - 1, b)) * TR.nx + Math.max(0, Math.min(TR.nx - 1, a))];
+      const cr = (p0, p1, p2, p3, t) => p1 + 0.5 * t * (p2 - p0 + t * (2 * p0 - 5 * p1 + 4 * p2 - p3 + t * (3 * (p1 - p2) + p3 - p0)));
+      const row = (b) => cr(g(i - 1, b), g(i, b), g(i + 1, b), g(i + 2, b), fx);
+      return cr(row(j - 1), row(j), row(j + 1), row(j + 2), fz);
     }
     const SKIRT = -10;   // 모형 받침 바닥 높이
 
@@ -87,7 +438,7 @@
     const controls = new T.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true; controls.dampingFactor = 0.08;
     controls.maxPolarAngle = Math.PI * 0.42; controls.minPolarAngle = 0;
-    controls.minDistance = 60; controls.maxDistance = span * 2.2;
+    controls.minDistance = 30; controls.maxDistance = span * 2.2;   // 30m 까지 가까이: 걷는 학생도 보여요
     controls.screenSpacePanning = false;
     const homeT = opts.homeTarget || [0, 0];
     const HOME = { theta: opts.homeTheta ?? 1.32, phi: opts.homePhi ?? 0.92, dist: opts.homeDist ?? span * 1.02 };
@@ -119,37 +470,64 @@
     sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.6;
     scene.add(sun, sun.target);
 
-    // ---- 땅 (지형 + 캔버스 그림)
+    // ---- 땅 (지형 + 캔버스 그림). 촘촘한 격자(2.5m · 휴대폰 5m)로 세우고, 길 · 학생은 이 면(hMesh)에 딱 붙여요
     const TEX = Math.min(renderer.capabilities.maxTextureSize || 2048, (root.innerWidth || 1000) > 700 ? 4096 : 2048);
     const groundCanvas = document.createElement('canvas'); groundCanvas.width = TEX; groundCanvas.height = Math.round(TEX * D / W);
     const groundTex = new T.CanvasTexture(groundCanvas);
-    groundTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
-    const segX = Math.round(W / 5), segZ = Math.round(D / 5);
-    const gGeo = new T.PlaneGeometry(W, D, segX, segZ); gGeo.rotateX(-Math.PI / 2); gGeo.translate(CX, 0, CZ);
-    { const p = gGeo.attributes.position; for (let i = 0; i < p.count; i++) p.setY(i, hAt(p.getX(i), p.getZ(i))); gGeo.computeVertexNormals(); }
+    groundTex.anisotropy = ANISO;
+    const GS = HI ? 2.5 : 5;
+    const gnx = Math.round(W / GS), gnz = Math.round(D / GS), gcw = W / gnx, gch = D / gnz;
+    const GH = new Float32Array((gnx + 1) * (gnz + 1));
+    for (let j = 0; j <= gnz; j++) for (let i = 0; i <= gnx; i++) GH[j * (gnx + 1) + i] = hAt(R.x0 + i * gcw, R.z0 + j * gch);
+    // 그려진 땅 면 그대로의 높이 (격자 한 칸을 대각선으로 나눈 삼각형 두 개)
+    function hMesh(x, z) {
+      const fx = (x - R.x0) / gcw, fz = (z - R.z0) / gch;
+      const i = Math.max(0, Math.min(gnx - 1, Math.floor(fx))), j = Math.max(0, Math.min(gnz - 1, Math.floor(fz)));
+      const u = Math.max(0, Math.min(1, fx - i)), v = Math.max(0, Math.min(1, fz - j));
+      const k = j * (gnx + 1) + i, ha = GH[k], hd = GH[k + 1], hb = GH[k + gnx + 1], hc = GH[k + gnx + 2];
+      return u + v <= 1 ? ha + (hd - ha) * u + (hb - ha) * v : hc + (hb - hc) * (1 - u) + (hd - hc) * (1 - v);
+    }
+    const gGeo = (() => {
+      const n = (gnx + 1) * (gnz + 1), pos = new Float32Array(n * 3), uv = new Float32Array(n * 2), idx = [];
+      for (let j = 0; j <= gnz; j++) for (let i = 0; i <= gnx; i++) {
+        const k = j * (gnx + 1) + i;
+        pos[k * 3] = R.x0 + i * gcw; pos[k * 3 + 1] = GH[k]; pos[k * 3 + 2] = R.z0 + j * gch;
+        uv[k * 2] = i / gnx; uv[k * 2 + 1] = 1 - j / gnz;
+      }
+      for (let j = 0; j < gnz; j++) for (let i = 0; i < gnx; i++) { const a = j * (gnx + 1) + i, b = a + gnx + 1, c = b + 1, d = a + 1; idx.push(a, b, d, b, c, d); }
+      const g = new T.BufferGeometry();
+      g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('uv', new T.BufferAttribute(uv, 2)); g.setIndex(idx);
+      g.computeVertexNormals();
+      return g;
+    })();
     const ground = new T.Mesh(gGeo, new T.MeshLambertMaterial({ map: groundTex }));
     ground.receiveShadow = true; ground.userData.kind = 'ground'; scene.add(ground);
-    // 받침 옆면 (모형처럼 잘린 단면)
+    // 받침 옆면 (모형처럼 잘린 단면): 땅 격자 가장자리와 같은 점을 써서 틈이 없어요
     const skirtMat = new T.MeshLambertMaterial({ color: 0x8a7f70 });
     const skirt = new T.Mesh(skirtGeometry(), skirtMat); scene.add(skirt);
     const baseGeo = new T.PlaneGeometry(W, D); baseGeo.rotateX(Math.PI / 2); baseGeo.translate(CX, SKIRT, CZ);
     const baseMesh = new T.Mesh(baseGeo, skirtMat); scene.add(baseMesh);
     function skirtGeometry() {
-      const pos = [], idx = [], N = 120;
-      const edge = (ax, az, bx, bz) => {
-        for (let k = 0; k < N; k++) {
-          const t0 = k / N, t1 = (k + 1) / N;
-          const x0 = ax + (bx - ax) * t0, z0 = az + (bz - az) * t0, x1 = ax + (bx - ax) * t1, z1 = az + (bz - az) * t1;
-          const o = pos.length / 3;
-          pos.push(x0, hAt(x0, z0), z0, x1, hAt(x1, z1), z1, x1, SKIRT, z1, x0, SKIRT, z0);
+      const pos = [], idx = [];
+      const gh = (i, j) => GH[j * (gnx + 1) + i];
+      const edge = (list) => {
+        for (let k = 0; k + 1 < list.length; k++) {
+          const [x0, y0, z0] = list[k], [x1, y1, z1] = list[k + 1], o = pos.length / 3;
+          pos.push(x0, y0, z0, x1, y1, z1, x1, SKIRT, z1, x0, SKIRT, z0);
           idx.push(o, o + 2, o + 1, o, o + 3, o + 2);
         }
       };
-      edge(R.x0, R.z1, R.x1, R.z1); edge(R.x1, R.z1, R.x1, R.z0); edge(R.x1, R.z0, R.x0, R.z0); edge(R.x0, R.z0, R.x0, R.z1);
+      const S = [], E = [], N = [], Wd = [];
+      for (let i = 0; i <= gnx; i++) S.push([R.x0 + i * gcw, gh(i, gnz), R.z1]);   // 남쪽 (서 → 동)
+      for (let j = gnz; j >= 0; j--) E.push([R.x1, gh(gnx, j), R.z0 + j * gch]);   // 동쪽 (남 → 북)
+      for (let i = gnx; i >= 0; i--) N.push([R.x0 + i * gcw, gh(i, 0), R.z0]);   // 북쪽 (동 → 서)
+      for (let j = 0; j <= gnz; j++) Wd.push([R.x0, gh(0, j), R.z0 + j * gch]);   // 서쪽 (북 → 남)
+      edge(S); edge(E); edge(N); edge(Wd);
       const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
       return g;
     }
 
+    const VEC_ROADS = opts.vectorRoads !== false;
     function paintGround(p) {
       const c = groundCanvas.getContext('2d'), sx = groundCanvas.width / W, sz = groundCanvas.height / D;
       const X = (x) => (x - R.x0) * sx, Z = (z) => (z - R.z0) * sz;
@@ -166,36 +544,160 @@
         if (a.k === 'pitch') { c.strokeStyle = p.pitchLine; c.lineWidth = 0.5 * sx; c.stroke(); }
         if (a.k === 'parking') { c.save(); poly(a.outer, a.holes); c.clip('evenodd'); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 0.15 * sx; for (let x = 0; x < groundCanvas.width; x += 2.6 * sx) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, groundCanvas.height); c.stroke(); } c.restore(); }
       }
-      const line = (pts) => { c.beginPath(); ringPts(pts).forEach(([x, z], i) => (i ? c.lineTo(X(x), Z(z)) : c.moveTo(X(x), Z(z)))); };
-      c.lineJoin = 'round'; c.lineCap = 'round';
-      const roads = campus.roads || [];
-      const small = roads.filter((r) => r.w < 4.5), big = roads.filter((r) => r.w >= 4.5);
-      for (const r of small) { line(r.pts); c.strokeStyle = p.pathEdge; c.lineWidth = (r.w + 0.6) * sx; c.stroke(); }
-      for (const r of small) { line(r.pts); c.strokeStyle = r.k === 'steps' ? p.steps : p.path; c.lineWidth = r.w * sx; c.stroke(); }
-      for (const r of small.filter((q) => q.k === 'steps')) { line(r.pts); c.setLineDash([0.35 * sx, 0.45 * sx]); c.lineCap = 'butt'; c.strokeStyle = p.pathEdge; c.lineWidth = r.w * 0.8 * sx; c.stroke(); c.setLineDash([]); c.lineCap = 'round'; }
-      for (const r of big) { line(r.pts); c.strokeStyle = p.curb; c.lineWidth = (r.w + 1.4) * sx; c.stroke(); }
-      for (const r of big) { line(r.pts); c.strokeStyle = r.k === 'pedestrian' ? p.plaza : p.road; c.lineWidth = r.w * sx; c.stroke(); }
-      c.setLineDash([3 * sx, 3.5 * sx]); c.lineCap = 'butt';
-      for (const r of big.filter((q) => q.w >= 6.5 && q.k !== 'pedestrian')) { line(r.pts); c.strokeStyle = p.line; c.lineWidth = 0.3 * sx; c.stroke(); }
-      c.setLineDash([]);
+      if (!VEC_ROADS) {   // 길을 도형으로 그리지 않을 때만 캔버스에 그려요
+        const line = (pts) => { c.beginPath(); ringPts(pts).forEach(([x, z], i) => (i ? c.lineTo(X(x), Z(z)) : c.moveTo(X(x), Z(z)))); };
+        c.lineJoin = 'round'; c.lineCap = 'round';
+        const roads = campus.roads || [];
+        const small = roads.filter((r) => r.w < 4.5), big = roads.filter((r) => r.w >= 4.5);
+        for (const r of small) { line(r.pts); c.strokeStyle = p.pathEdge; c.lineWidth = (r.w + 0.6) * sx; c.stroke(); }
+        for (const r of small) { line(r.pts); c.strokeStyle = r.k === 'steps' ? p.steps : p.path; c.lineWidth = r.w * sx; c.stroke(); }
+        for (const r of small.filter((q) => q.k === 'steps')) { line(r.pts); c.setLineDash([0.35 * sx, 0.45 * sx]); c.lineCap = 'butt'; c.strokeStyle = p.pathEdge; c.lineWidth = r.w * 0.8 * sx; c.stroke(); c.setLineDash([]); c.lineCap = 'round'; }
+        for (const r of big) { line(r.pts); c.strokeStyle = p.curb; c.lineWidth = (r.w + 1.4) * sx; c.stroke(); }
+        for (const r of big) { line(r.pts); c.strokeStyle = r.k === 'pedestrian' ? p.plaza : p.road; c.lineWidth = r.w * sx; c.stroke(); }
+        c.setLineDash([3 * sx, 3.5 * sx]); c.lineCap = 'butt';
+        for (const r of big.filter((q) => q.w >= 6.5 && q.k !== 'pedestrian')) { line(r.pts); c.strokeStyle = p.line; c.lineWidth = 0.3 * sx; c.stroke(); }
+        c.setLineDash([]);
+      }
       // 캠퍼스 경계 (점선)
       if (campus.campus) { poly(campus.campus); c.setLineDash([1.2 * sx, 1.6 * sx]); c.strokeStyle = 'rgba(17,106,134,0.55)'; c.lineWidth = 0.9 * sx; c.stroke(); c.setLineDash([]); }
       groundTex.needsUpdate = true;
     }
 
+    // ---- 길 (도형): 캔버스와 같은 순서로 쌓아요 (작은 길 테두리 → 작은 길 → 계단 줄 → 큰 길 연석 → 큰 길 → 가운데 점선)
+    //      땅 면(hMesh)에 붙이고 조금씩 띄워, 확대해도 번지지 않고 또렷해요. 그림자도 받아요.
+    const roadLayer = (() => {
+      if (!VEC_ROADS) return { meshes: [], colorize() {}, verts: 0 };
+      const NL = 6, LIFT = [0.04, 0.06, 0.08, 0.1, 0.12, 0.14];
+      const L = Array.from({ length: NL }, () => ({ pos: [], nor: [], cls: [], idx: [] }));
+      const clampX = (x) => Math.max(R.x0, Math.min(R.x1, x)), clampZ = (z) => Math.max(R.z0, Math.min(R.z1, z));
+      function vert(k, x, z, c) {
+        x = clampX(x); z = clampZ(z);
+        const l = L[k], gx = hAt(x - 1, z) - hAt(x + 1, z), gz = hAt(x, z - 1) - hAt(x, z + 1), inv = 1 / Math.hypot(gx, 2, gz);
+        l.pos.push(x, hMesh(x, z) + LIFT[k], z); l.nor.push(gx * inv, 2 * inv, gz * inv); l.cls.push(c);
+        return l.cls.length - 1;
+      }
+      function clip(ax, az, bx, bz) {   // 지도 네모 안 부분만 (Liang–Barsky)
+        let t0 = 0, t1 = 1; const dx = bx - ax, dz = bz - az;
+        for (const [p, q] of [[-dx, ax - R.x0], [dx, R.x1 - ax], [-dz, az - R.z0], [dz, R.z1 - az]]) {
+          if (p === 0) { if (q < 0) return null; continue; }
+          const r = q / p;
+          if (p < 0) { if (r > t1) return null; if (r > t0) t0 = r; } else { if (r < t0) return null; if (r < t1) t1 = r; }
+        }
+        return [ax + dx * t0, az + dz * t0, ax + dx * t1, az + dz * t1];
+      }
+      function band(k, ax, az, bx, bz, hw, c) {   // 선분을 폭 2·hw 띠로 (GS 마다 나눠 땅을 따라요)
+        const dx = bx - ax, dz = bz - az, len = Math.hypot(dx, dz); if (len < 0.01) return;
+        const nx = -dz / len * hw, nz = dx / len * hw, n = Math.max(1, Math.ceil(len / GS));
+        let prev = -1;
+        for (let i = 0; i <= n; i++) {
+          const x = ax + dx * i / n, z = az + dz * i / n;
+          const a = vert(k, x + nx, z + nz, c); vert(k, x - nx, z - nz, c);
+          if (prev >= 0) L[k].idx.push(prev, a, prev + 1, prev + 1, a, a + 1);
+          prev = a;
+        }
+      }
+      function disc(k, x, z, r, c) {   // 꺾이는 곳 · 끝을 둥글게
+        if (x < R.x0 || x > R.x1 || z < R.z0 || z > R.z1) return;
+        const SEG = r > 2.5 ? 14 : 10, o = vert(k, x, z, c);
+        for (let s = 0; s < SEG; s++) { const a = s / SEG * Math.PI * 2; vert(k, x + Math.cos(a) * r, z + Math.sin(a) * r, c); }
+        for (let s = 0; s < SEG; s++) L[k].idx.push(o, o + 1 + (s + 1) % SEG, o + 1 + s);
+      }
+      function stroke(k, pts, hw, c) {
+        for (let i = 0; i + 1 < pts.length; i++) { const s = clip(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1]); if (s) band(k, s[0], s[1], s[2], s[3], hw, c); }
+        for (const [x, z] of pts) disc(k, x, z, hw, c);
+      }
+      function dashes(k, pts, on, off, hw, c) {   // 점선: on m 칠하고 off m 비우기 (꺾여도 이어서)
+        let start = 0, acc = 0;
+        for (let i = 0; i + 1 < pts.length; i++) {
+          const [ax, az] = pts[i], [bx, bz] = pts[i + 1], len = Math.hypot(bx - ax, bz - az);
+          if (len < 0.01) continue;
+          const ux = (bx - ax) / len, uz = (bz - az) / len;
+          while (start < acc + len) {
+            const s0 = Math.max(start, acc) - acc, s1 = Math.min(start + on, acc + len) - acc;
+            if (s1 > s0 + 0.01) { const g = clip(ax + ux * s0, az + uz * s0, ax + ux * s1, az + uz * s1); if (g) band(k, g[0], g[1], g[2], g[3], hw, c); }
+            if (start + on > acc + len) break;
+            start += on + off;
+          }
+          acc += len;
+        }
+      }
+      const roads = (campus.roads || []).map((r) => ({ ...r, p: ringPts(r.pts) }));
+      const small = roads.filter((r) => r.w < 4.5), big = roads.filter((r) => r.w >= 4.5);
+      for (const r of small) stroke(0, r.p, (r.w + 0.6) / 2, 'pathEdge');
+      for (const r of small) stroke(1, r.p, r.w / 2, r.k === 'steps' ? 'steps' : 'path');
+      for (const r of small.filter((q) => q.k === 'steps')) dashes(2, r.p, 0.35, 0.45, r.w * 0.4, 'pathEdge');
+      for (const r of big) stroke(3, r.p, (r.w + 1.4) / 2, 'curb');
+      for (const r of big) stroke(4, r.p, r.w / 2, r.k === 'pedestrian' ? 'plaza' : 'road');
+      for (const r of big.filter((q) => q.w >= 6.5 && q.k !== 'pedestrian')) dashes(5, r.p, 3, 3.5, 0.15, 'line');
+      const meshes = L.map((l, k) => {
+        const g = new T.BufferGeometry();
+        g.setAttribute('position', new T.Float32BufferAttribute(l.pos, 3));
+        g.setAttribute('normal', new T.Float32BufferAttribute(l.nor, 3));
+        g.setAttribute('color', new T.Float32BufferAttribute(new Float32Array(l.cls.length * 3), 3));
+        g.setIndex(l.idx);
+        const m = new T.Mesh(g, new T.MeshLambertMaterial({ vertexColors: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 - k * 2 }));
+        m.receiveShadow = true; m.renderOrder = 2 + k; m.userData = { kind: 'road', cls: l.cls };
+        scene.add(m);
+        return m;
+      });
+      function colorize(p) {
+        const cache = {};
+        for (const m of meshes) {
+          const a = m.geometry.attributes.color, cls = m.userData.cls;
+          for (let i = 0; i < cls.length; i++) { const c = cache[cls[i]] || (cache[cls[i]] = new T.Color(p[cls[i]])); a.setXYZ(i, c.r, c.g, c.b); }
+          a.needsUpdate = true;
+        }
+      }
+      return { meshes, colorize, verts: L.reduce((s, l) => s + l.cls.length, 0) };
+    })();
+
     // ---- 건물
-    function windowTexture(color) {
-      const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64;
-      const g = cv.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, 64, 64);
-      g.fillStyle = color; g.fillRect(11, 18, 42, 26);
-      g.fillStyle = 'rgba(0,0,0,0.07)'; g.fillRect(0, 59, 64, 5);
+    const WT = HI ? 256 : 128;   // 창문 그림 한 칸(가로 3.2m × 한 층 3.6m)의 화소
+    function windowTexture(p, lit) {
+      const S = WT, cv = document.createElement('canvas'); cv.width = cv.height = S;
+      const g = cv.getContext('2d');
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, S, S);
+      const x0 = Math.round(S * 0.17), x1 = Math.round(S * 0.83), y0 = Math.round(S * 0.25), y1 = Math.round(S * 0.71);
+      const gr = g.createLinearGradient(0, y0, 0, y1);
+      gr.addColorStop(0, lit ? p.litTop : p.glassTop); gr.addColorStop(1, lit ? p.litBot : p.glassBot);
+      g.fillStyle = gr; g.fillRect(x0, y0, x1 - x0, y1 - y0);
+      g.fillStyle = p.mullion; g.fillRect(Math.round(S / 2 - S / 96), y0, Math.max(1, Math.round(S / 48)), y1 - y0);   // 가운데 창살
+      g.strokeStyle = p.frame; g.lineWidth = Math.max(1, S / 64); g.strokeRect(x0, y0, x1 - x0, y1 - y0);   // 창틀
+      g.fillStyle = 'rgba(0,0,0,0.10)'; g.fillRect(x0 - Math.round(S * 0.02), y1 + Math.round(S * 0.012), (x1 - x0) + Math.round(S * 0.04), Math.max(1, Math.round(S * 0.025)));   // 창턱 그림자
+      g.fillStyle = 'rgba(0,0,0,0.06)'; g.fillRect(0, S - Math.round(S * 0.07), S, Math.round(S * 0.07));   // 층 띠
       const t = new T.CanvasTexture(cv); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(1 / 3.2, 1 / 3.6);
-      t.anisotropy = groundTex.anisotropy;
+      t.anisotropy = ANISO;
       return t;
+    }
+    // 옥상 난간: 지붕 둘레에 얇은 벽(바깥 · 안 두 면). 창문 그림에서 벽색만 있는 줄(v = 3.24 → 0.9)을 써서 벽과 같은 색이에요
+    const PH = 0.9;
+    function parapetGeometry(rings, y0, h) {
+      const pos = [], nor = [], uv = [], idx = [], V = 3.24;
+      for (const r of rings) {
+        let u = 0;
+        for (let i = 0; i < r.length; i++) {
+          const a = r[i], b = r[(i + 1) % r.length], dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz);
+          if (L < 0.05) continue;
+          const nx = dz / L, nz = -dx / L;
+          for (const s of [1, -1]) {
+            const o = pos.length / 3;
+            pos.push(a[0], y0, a[1], b[0], y0, b[1], b[0], y0 + h, b[1], a[0], y0 + h, a[1]);
+            for (let k = 0; k < 4; k++) nor.push(nx * s, 0, nz * s);
+            uv.push(u, V, u + L, V, u + L, V, u, V);
+            if (s > 0) idx.push(o, o + 2, o + 1, o, o + 3, o + 2); else idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
+          }
+          u += L;
+        }
+      }
+      const g = new T.BufferGeometry();
+      g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new T.Float32BufferAttribute(nor, 3));
+      g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
+      return g;
     }
     let texDay = null, texLit = null;
     const buildings = [];
     const roofBoxes = [];
+    const edgePos = [];
     for (const bd of campus.buildings || []) {
       const outer = ringPts(bd.outer); if (outer.length < 3) continue;
       const holes = (bd.holes || []).map(ringPts).filter((h) => h.length >= 3);
@@ -206,16 +708,25 @@
       const geo = new T.ExtrudeGeometry(shape, { depth: top - base, bevelEnabled: false });
       geo.rotateX(-Math.PI / 2); geo.translate(0, base, 0);
       const alt = hash(bd.id) % 3 === 0;
-      const wall = new T.MeshLambertMaterial({ color: 0xffffff });
-      const roof = new T.MeshLambertMaterial({ color: 0xffffff });
+      // 면을 아주 조금 뒤로 밀어 테두리 선이 깜빡이지 않게 해요
+      const wall = new T.MeshLambertMaterial({ color: 0xffffff, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
+      const roof = new T.MeshLambertMaterial({ color: 0xffffff, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
       const mesh = new T.Mesh(geo, [roof, wall]);
       mesh.castShadow = true; mesh.receiveShadow = true; mesh.userData = { kind: 'building', id: bd.id };
       scene.add(mesh);
+      const rings = [outer].concat(holes);
+      const par = new T.Mesh(parapetGeometry(rings, top, PH), wall);
+      par.castShadow = true; par.receiveShadow = true; par.userData = mesh.userData;
+      scene.add(par);
+      const eg = new T.EdgesGeometry(geo, 35), ea = eg.attributes.position.array;
+      for (let i = 0; i < ea.length; i++) edgePos.push(ea[i]);
+      eg.dispose();
+      for (const r of rings) for (let i = 0; i < r.length; i++) { const a = r[i], b = r[(i + 1) % r.length]; edgePos.push(a[0], top + PH, a[1], b[0], top + PH, b[1]); }
       const c = centroid(outer), A = Math.abs(area(outer));
       buildings.push({ id: bd.id, name: bd.name || '', bg: !!bd.bg, outer, c, A, top, mesh, wall, roof, alt, lit: hash(bd.id + 'L') % 3 !== 0 });
       if (!bd.bg) {
         const r = rng(hash(bd.id)), n = Math.min(7, Math.floor(A / 320));
-        const bb = outer.reduce((m, q) => [Math.min(m[0], q[0]), Math.min(m[1], q[1]), Math.max(m[2], q[0]), Math.max(m[3], q[1])], [1e9, 1e9, -1e9, -1e9]);
+        const bb = bbox(outer);
         for (let k = 0, tries = 0; k < n && tries < 60; tries++) {
           const px = bb[0] + r() * (bb[2] - bb[0]), pz = bb[1] + r() * (bb[3] - bb[1]);
           if (!inside([px, pz], outer) || distToRing([px, pz], outer) < 3.5 || holes.some((h) => inside([px, pz], h))) continue;
@@ -223,6 +734,9 @@
         }
       }
     }
+    const edgeGeo = new T.BufferGeometry(); edgeGeo.setAttribute('position', new T.Float32BufferAttribute(edgePos, 3));
+    const edgeMat = new T.LineBasicMaterial({ color: 0x56626c, transparent: true, opacity: 0.3, depthWrite: false });
+    const edgeLines = new T.LineSegments(edgeGeo, edgeMat); edgeLines.renderOrder = 8; scene.add(edgeLines);
     const boxGeo = new T.BoxGeometry(1, 1, 1); boxGeo.translate(0, 0.5, 0);
     const boxMat = new T.MeshLambertMaterial({ color: 0xe9ece9 });
     const boxes = new T.InstancedMesh(boxGeo, boxMat, Math.max(1, roofBoxes.length));
@@ -230,11 +744,30 @@
     roofBoxes.forEach((b, i) => { M.compose(P.set(b[0], b[1], b[2]), Q, S.set(b[3], b[4], b[5])); boxes.setMatrixAt(i, M); });
     boxes.count = roofBoxes.length; boxes.castShadow = true; scene.add(boxes);
 
-    // ---- 나무
+    // ---- 나무: 빠른 컴퓨터는 둥근 덩어리 세 개를 붙인 나뭇잎(위가 조금 밝게), 휴대폰은 덩어리 하나
+    function crownGeometry(hi) {
+      const parts = hi ? [[0, 0, 0, 1, 0.92], [0.5, 0.2, 0.18, 0.68, 1.02], [-0.38, 0.4, -0.2, 0.64, 1.1]] : [[0, 0, 0, 1, 1]];
+      const pos = [], nor = [], col = [], idx = [];
+      for (const [cx, cy, cz, r, shade] of parts) {
+        const g = new T.SphereGeometry(1, 7, 5), p = g.attributes.position, nn = g.attributes.normal, o = pos.length / 3;
+        for (let i = 0; i < p.count; i++) {
+          const nx = nn.getX(i), ny = nn.getY(i), nz = nn.getZ(i);
+          const j = hi ? 1 + 0.07 * Math.sin(nx * 7.1 + ny * 5.3 + nz * 6.7 + cx * 3) : 1;   // 울퉁불퉁 (같은 방향이면 같은 값이라 이음매가 없어요)
+          pos.push(cx + nx * r * j, cy + ny * r * j, cz + nz * r * j); nor.push(nx, ny, nz);
+          const sh = shade * (0.9 + 0.12 * (ny * 0.5 + 0.5)); col.push(sh, sh, sh);
+        }
+        const ix = g.index.array; for (let i = 0; i < ix.length; i++) idx.push(ix[i] + o);
+        g.dispose();
+      }
+      const geo = new T.BufferGeometry();
+      geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); geo.setAttribute('normal', new T.Float32BufferAttribute(nor, 3));
+      geo.setAttribute('color', new T.Float32BufferAttribute(col, 3)); geo.setIndex(idx);
+      return geo;
+    }
     const treePts = ringPts(campus.trees || []);
-    const crownGeo = new T.IcosahedronGeometry(1, 0);
-    const trunkGeo = new T.CylinderGeometry(0.2, 0.28, 1, 5); trunkGeo.translate(0, 0.5, 0);
-    const crowns = new T.InstancedMesh(crownGeo, new T.MeshLambertMaterial({ color: 0xffffff }), Math.max(1, treePts.length));
+    const crownGeo = crownGeometry(HI);
+    const trunkGeo = new T.CylinderGeometry(0.2, 0.28, 1, 6); trunkGeo.translate(0, 0.5, 0);
+    const crowns = new T.InstancedMesh(crownGeo, new T.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }), Math.max(1, treePts.length));
     const trunks = new T.InstancedMesh(trunkGeo, new T.MeshLambertMaterial({ color: 0x6b5a45 }), Math.max(1, treePts.length));
     const treeAlt = [];
     { const r = rng(7); treePts.forEach(([x, z], i) => {
@@ -243,6 +776,7 @@
       Q.identity(); M.compose(P.set(x, y - 0.3, z), Q, S.set(1, h + 0.8, 1)); trunks.setMatrixAt(i, M);
     }); }
     crowns.count = trunks.count = treePts.length; crowns.castShadow = true; trunks.castShadow = true;
+    crowns.receiveShadow = true;
     scene.add(crowns, trunks);
 
     // ---- 이름표
@@ -321,6 +855,7 @@
       return s;
     }
     function placeSensor(s) {
+      shadowAt = -1e9;
       const { x, z } = s.site;
       const zb = s.site.zone ? buildings.find((b) => b.id === s.site.zone) : null;
       s.zone = zb || nearestBuilding(x, z, 30);
@@ -333,6 +868,148 @@
       s.pole.position.y = s.baseY; s.pole.scale.set(1, H, 1);
       s.head.position.y = s.baseY + H + 2.2;
       s.lab.pos.set(x, s.baseY + H + 6.5, z);
+    }
+
+    // ---- 학생 캐릭터 (꾸밈용 가상 인물): 몸 부분마다 InstancedMesh 하나 (다리 · 몸 · 팔 · 머리 · 눈 · 머리카락 · 가방 · 발밑 그림자)
+    const walk = buildWalkGraph(campus);
+    const STU_N = Math.max(0, Math.floor(opts.studentCount ?? (SMALL ? 24 : 56)));
+    const crowd = walk.nodes.length >= 2 && STU_N ? makeCrowd(walk, { count: STU_N, seed: opts.studentSeed || 20261107,
+      hotspots: () => [...sensors.values()].filter((s) => s.placed).map((s) => ({ x: s.site.x, z: s.site.z })) }) : null;
+    const stuGroup = new T.Group(); scene.add(stuGroup);
+    const parts = [];
+    let blob = null;
+    const ZERO = new T.Matrix4().makeScale(0, 0, 0);
+    if (crowd) {
+      const stuMat = new T.MeshLambertMaterial({ color: 0xffffff });
+      const box = (w, h, d, x, y, z) => { const g = new T.BoxGeometry(w, h, d); g.translate(x, y, z); return g; };
+      const torsoGeo = new T.CylinderGeometry(0.2, 0.24, 0.58, 10); torsoGeo.translate(0, 1.0, 0);
+      const headGeo2 = new T.SphereGeometry(0.27, 12, 9); headGeo2.translate(0, 0.26, 0);
+      const hairGeo = new T.SphereGeometry(0.292, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.56); hairGeo.rotateX(-0.3); hairGeo.translate(0, 0.275, -0.015);
+      const eyeGeo = (() => {   // 눈 두 개 (가까이 볼 때만 보여요)
+        const a = new T.SphereGeometry(0.034, 6, 4), b = a.clone(); a.translate(0.088, 0.29, 0.245); b.translate(-0.088, 0.29, 0.245);
+        const pos = [...a.attributes.position.array, ...b.attributes.position.array], nor = [...a.attributes.normal.array, ...b.attributes.normal.array];
+        const off = a.attributes.position.count, idx = [...a.index.array, ...[...b.index.array].map((i) => i + off)];
+        const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new T.Float32BufferAttribute(nor, 3)); g.setIndex(idx);
+        a.dispose(); b.dispose(); return g;
+      })();
+      const DEF = [
+        ['legL', box(0.15, 0.72, 0.17, 0, -0.36, 0), 'pants', [0.1, 0.74, 0]],
+        ['legR', box(0.15, 0.72, 0.17, 0, -0.36, 0), 'pants', [-0.1, 0.74, 0]],
+        ['torso', torsoGeo, 'shirt', null],
+        ['armL', box(0.11, 0.52, 0.12, 0, -0.25, 0), 'shirt', [0.285, 1.24, 0]],
+        ['armR', box(0.11, 0.52, 0.12, 0, -0.25, 0), 'shirt', [-0.285, 1.24, 0]],
+        ['head', headGeo2, 'skin', [0, 1.3, 0]],
+        ['eyes', eyeGeo, 'eye', [0, 1.3, 0]],
+        ['hair', hairGeo, 'hair', [0, 1.3, 0]],
+        ['hairBack', box(0.46, 0.36, 0.12, 0, 0.13, -0.2), 'hair', [0, 1.3, 0]],
+        ['bag', box(0.3, 0.36, 0.15, 0, 1.03, -0.215), 'bag', null],
+      ];
+      for (const [name, geo, role, pivot] of DEF) {
+        const m = new T.InstancedMesh(geo, stuMat, STU_N); m.receiveShadow = true; m.userData.kind = 'student';
+        stuGroup.add(m);
+        parts.push({ name, mesh: m, role, pivot: pivot ? new T.Vector3(pivot[0], pivot[1], pivot[2]) : null });
+      }
+      const bc = document.createElement('canvas'); bc.width = bc.height = 64;
+      const bctx = bc.getContext('2d'), grd = bctx.createRadialGradient(32, 32, 2, 32, 32, 31);
+      grd.addColorStop(0, 'rgba(0,0,0,0.55)'); grd.addColorStop(1, 'rgba(0,0,0,0)'); bctx.fillStyle = grd; bctx.fillRect(0, 0, 64, 64);
+      const blobGeo = new T.PlaneGeometry(1, 1); blobGeo.rotateX(-Math.PI / 2);
+      blob = new T.InstancedMesh(blobGeo, new T.MeshBasicMaterial({ map: new T.CanvasTexture(bc), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -16 }), STU_N);
+      blob.renderOrder = 12; stuGroup.add(blob);
+    }
+    let studentsOn = !!crowd && opts.students !== false;
+    stuGroup.visible = studentsOn;
+    let colored = false;
+    function colorStudents(list) {
+      const c = new T.Color();
+      for (const part of parts) {
+        list.forEach((n, i) => {
+          const L = n.look, v = part.role === 'eye' ? 0x2a2522 : part.role === 'bag' ? (L.bag || 0x333333) : L[part.role];
+          part.mesh.setColorAt(i, c.setHex(v));
+        });
+        if (part.mesh.instanceColor) part.mesh.instanceColor.needsUpdate = true;
+      }
+    }
+    // 멀리서 볼수록 학생을 크게 그려요 (가까이 보면 1.15배, 245m 넘게 멀리서 보면 3배까지) → 캠퍼스 전체를 볼 때도 걷는 모습이 보여요
+    const visScale = () => Math.max(1.15, Math.min(3, 0.55 + camera.position.distanceTo(controls.target) / 100));
+    // 흡연 의심(SMOKE)인 센서 둘레만 냄새 구역이에요. 판단 보류(수증기일 수 있음) · 공기 변화에는 반응하지 않아요
+    const smokeZones = () => { const z = []; for (const s of sensors.values()) if (s.state === 'SMOKE' && s.placed) z.push({ id: s.site.id, x: s.site.x, z: s.site.z, r: s.R + 10 }); return z; };
+    function poseOf(n, t) {
+      const p = { legL: 0, legR: 0, armLx: 0, armLz: 0.06, armRx: 0, armRz: -0.06, head: 0, bob: 0, lean: 0 };
+      if (n.mode === 'walk') {
+        const A = n.fast ? 0.62 : 0.45, s = Math.sin(n.phase);
+        p.legL = A * s; p.legR = -A * s; p.armLx = -0.8 * A * s; p.armRx = 0.8 * A * s; p.bob = Math.abs(Math.cos(n.phase)) * 0.035;
+        if (n.fast && n.say && n.say.kind === 'smell') { p.armRx = -2.45; p.armRz = -0.5; }   // 달아나면서도 코를 막아요
+      } else if (n.mode === 'react') {   // 코 막기: 오른손을 얼굴 앞으로, 몸을 조금 뒤로
+        p.armRx = -2.45; p.armRz = -0.5; p.armLx = -0.35; p.armLz = 0.25; p.head = -0.12; p.lean = -0.1; p.bob = Math.abs(Math.sin(t * 9)) * 0.02;
+      } else if (n.mode === 'chat') {
+        p.armLx = -0.35 + 0.25 * Math.sin(t * 3 + n.id); p.head = 0.08 * Math.sin(t * 2.3 + n.id);
+      } else if (n.pose === 'phone') {   // 휴대폰 보기
+        p.armRx = -1.25; p.armRz = -0.3; p.armLx = -0.9; p.armLz = 0.32; p.head = 0.32;
+      } else p.head = 0.05 * Math.sin(t * 0.7 + n.id);
+      return p;
+    }
+    const Mroot = new T.Matrix4(), Mloc = new T.Matrix4(), Mout = new T.Matrix4(), E1 = new T.Euler(), E2 = new T.Euler();
+    const FOOT = 0.14, UP = new T.Vector3(0, 1, 0);
+    const Q1 = new T.Quaternion(), Q2 = new T.Quaternion(), V1 = new T.Vector3(), V2 = new T.Vector3(), ONE = new T.Vector3(1, 1, 1);
+    function drawStudents(vis, t) {
+      const list = crowd.npcs;
+      if (!colored && list.length) { colorStudents(list); colored = true; }
+      for (let i = 0; i < list.length; i++) {
+        const n = list[i], p = poseOf(n, t), y = hMesh(n.rx, n.rz);
+        Q1.setFromEuler(E1.set(p.lean, n.h, 0, 'YXZ'));
+        Mroot.compose(V1.set(n.rx, y + FOOT + p.bob * vis, n.rz), Q1, V2.set(vis, vis, vis));
+        for (const part of parts) {
+          let ax = 0, az = 0, hide = false;
+          switch (part.name) {
+            case 'legL': ax = p.legL; break;
+            case 'legR': ax = p.legR; break;
+            case 'armL': ax = p.armLx; az = p.armLz; break;
+            case 'armR': ax = p.armRx; az = p.armRz; break;
+            case 'head': case 'hair': case 'eyes': ax = p.head; break;
+            case 'hairBack': ax = p.head; hide = !n.look.long; break;
+            case 'bag': hide = !n.look.bag; break;
+            default: break;
+          }
+          if (hide) { part.mesh.setMatrixAt(i, ZERO); continue; }
+          if (part.pivot) { Q2.setFromEuler(E2.set(ax, 0, az, 'ZYX')); Mloc.compose(part.pivot, Q2, ONE); Mout.multiplyMatrices(Mroot, Mloc); part.mesh.setMatrixAt(i, Mout); }
+          else part.mesh.setMatrixAt(i, Mroot);
+        }
+        const gx = hAt(n.rx - 1, n.rz) - hAt(n.rx + 1, n.rz), gz = hAt(n.rx, n.rz - 1) - hAt(n.rx, n.rz + 1);
+        Q2.setFromUnitVectors(UP, V2.set(gx, 2, gz).normalize());
+        Mout.compose(V1.set(n.rx, y + 0.18, n.rz), Q2, V2.set(0.95 * vis, 1, 0.95 * vis)); blob.setMatrixAt(i, Mout);
+      }
+      for (const part of parts) part.mesh.instanceMatrix.needsUpdate = true;
+      blob.instanceMatrix.needsUpdate = true;
+    }
+    // 말풍선 (이름표 층 위). 냄새 반응은 늘, 잡담은 가까이 볼 때만 보여요
+    const bubbles = new Map();
+    const bv = new T.Vector3();
+    // 건물 뒤에 가린 학생인지 (0.25초마다 한 번씩 봐요): 잡담 말풍선은 숨기고, 냄새 반응은 흐리게 보여요
+    const occRay = new T.Raycaster(), occDir = new T.Vector3(), headP = new T.Vector3();
+    const bldObjs = buildings.map((b) => b.mesh);
+    function behindBuilding(x, y, z) {
+      headP.set(x, y, z); occDir.subVectors(headP, camera.position);
+      const L = occDir.length(); if (L < 1) return false;
+      occRay.set(camera.position, occDir.divideScalar(L)); occRay.far = L - 0.8;
+      return occRay.intersectObjects(bldObjs, false).length > 0;
+    }
+    function placeBubbles(vis) {
+      const near = camera.position.distanceTo(controls.target) < 360, now = performance.now();
+      for (const n of crowd.npcs) {
+        let b = bubbles.get(n.id);
+        const want = studentsOn && n.say && (n.say.kind === 'smell' || near);
+        if (!want) { if (b && b.el.style.display !== 'none') b.el.style.display = 'none'; continue; }
+        if (!b) { const el = document.createElement('div'); el.className = 'm3-say'; el.setAttribute('aria-hidden', 'true'); overlay.appendChild(el); b = { el, text: '' }; bubbles.set(n.id, b); }
+        if (b.text !== n.say.text) { b.text = n.say.text; b.el.textContent = n.say.text; b.el.classList.toggle('smell', n.say.kind === 'smell'); }
+        const gy = hMesh(n.rx, n.rz) + FOOT;
+        bv.set(n.rx, gy + 2.0 * vis + 0.6, n.rz).project(camera);
+        if (!(bv.z < 1 && bv.x > -1.1 && bv.x < 1.1 && bv.y > -1.1 && bv.y < 1.1)) { b.el.style.display = 'none'; continue; }
+        if (!b.chk || now - b.chk > 250) { b.chk = now; b.behind = behindBuilding(n.rx, gy + 1.55 * vis, n.rz); }
+        if (b.behind && n.say.kind !== 'smell') { b.el.style.display = 'none'; continue; }
+        b.el.classList.toggle('behind', !!b.behind);
+        b.el.style.display = '';
+        b.el.style.transform = `translate(${((bv.x + 1) / 2 * VW).toFixed(1)}px, ${((1 - bv.y) / 2 * VH).toFixed(1)}px) translate(-50%, -100%)`;
+      }
     }
 
     let editing = false, selected = null, pal = PALETTE.day;
@@ -372,8 +1049,31 @@
       zoneOf(id) { const s = sensors.get(id); return s && s.zone ? { id: s.zone.id, name: s.zone.name } : null; },
       buildingList: () => buildings.filter((b) => !b.bg).map((b) => ({ id: b.id, name: b.name, x: b.c[0], z: b.c[1] })),
       heightAt: hAt,
+      groundAt: hMesh,
       tints: () => buildings.filter((b) => b.tint).map((b) => ({ id: b.id, name: b.name, tint: b.tint, wall: '#' + b.wall.color.getHexString(), roof: '#' + b.roof.color.getHexString() })),
-      stats: () => ({ buildings: buildings.length, trees: treePts.length, roads: (campus.roads || []).length, areas: (campus.areas || []).length, tex: TEX, shadow: SM }),
+      stats: () => ({ buildings: buildings.length, trees: treePts.length, roads: (campus.roads || []).length, areas: (campus.areas || []).length, tex: TEX, shadow: SM,
+                      quality: QUALITY, gpuSoft: SOFT, pixelRatio: prNow, pixelRatioMax: PR_MAX, groundStep: GS, roadVerts: roadLayer.verts, edgeSegs: edgePos.length / 6, windowTex: WT,
+                      students: crowd ? crowd.count : 0 }),
+      // 학생 캐릭터 켜고 끄기 · 상태
+      setStudents(on) {
+        studentsOn = !!on && !!crowd; stuGroup.visible = studentsOn;
+        if (!studentsOn) for (const b of bubbles.values()) b.el.style.display = 'none';
+      },
+      studentsOn: () => studentsOn,
+      students: () => ({
+        on: studentsOn, count: crowd ? crowd.count : 0, nodes: walk.nodes.length, edges: walk.edges.length, length_m: Math.round(walk.length),
+        zones: crowd ? crowd.zones.map((q) => q.id) : [], time: crowd ? +crowd.time.toFixed(1) : 0,
+        list: crowd ? crowd.npcs.map((n) => ({ x: +n.rx.toFixed(2), z: +n.rz.toFixed(2), mode: n.mode, fast: n.fast, say: n.say ? n.say.text : null, reacts: n.reacts })) : [],
+        bubbles: [...bubbles.values()].filter((b) => b.el.style.display !== 'none').map((b) => b.el.textContent),
+      }),
+      walkGraph: () => walk,
+      // 시험용 손잡이
+      _test: {
+        // i 번 학생을 센서 id 에서 maxD m 안의 가장 가까운 길 마디에 세워요
+        near(i, id, maxD) { const s = sensors.get(id); if (!crowd || !s) return false; const k = crowd.nearestNode(s.site.x, s.site.z, maxD ?? 20); return k >= 0 && crowd.place(i, k, 30); },
+        // 화면 그리기를 기다리지 않고 sec 초만큼 움직여요
+        run(sec) { if (!crowd) return; crowd.setZones(smokeZones()); for (let k = 0; k < Math.round(sec / 0.1); k++) crowd.step(0.1, visScale()); },
+      },
       renderer, camera, controls, scene,
       dispose() { cancelAnimationFrame(raf); ro.disconnect(); renderer.dispose(); wrap.remove(); },
     };
@@ -408,9 +1108,11 @@
       hemi.color.set(p.hemiSky); hemi.groundColor.set(p.hemiGround); hemi.intensity = p.hemi; sun.intensity = p.sun;
       skirtMat.color.set(p.skirt);
       paintGround(p);
+      roadLayer.colorize(p);
       if (texDay) texDay.dispose(); if (texLit) texLit.dispose();
-      texDay = windowTexture(p.window); texLit = p.windowLit ? windowTexture(p.windowLit) : null;
+      texDay = windowTexture(p, false); texLit = p.litTop ? windowTexture(p, true) : null;
       for (const b of buildings) { b.wall.map = (texLit && b.lit && !b.bg) ? texLit : texDay; b.wall.needsUpdate = true; }
+      edgeMat.color.set(p.edge); edgeMat.opacity = p.edgeOp;
       boxMat.color.set(p.box);
       trunks.material.color.set(p.trunk);
       const ca = new T.Color(p.tree), cb = new T.Color(p.treeAlt);
@@ -502,11 +1204,25 @@
     }
     function goHome() { lastHome = homeFor(); setView(lastHome.theta, HOME.phi, lastHome.dist, lastHome.tx, lastHome.tz); }
     const ro = new ResizeObserver(resize); ro.observe(wrap); resize();
-    let raf = 0; const t0 = performance.now();
+    // 빠르기에 맞춘 화면 촘촘함: 2~3초마다 한 장 그리는 데 걸린 평균 시간을 보고 0.25씩 올리거나 내려요 (내린 뒤 30초는 다시 올리지 않아요)
+    let fAcc = 0, fN = 0, fLast = 0, fAdj = 0, holdUntil = 0;
+    function adapt(now) {
+      const gap = fLast ? now - fLast : 0; fLast = now;
+      if (gap > 0 && gap < 250) { fAcc += gap; fN++; }
+      if (fN < 60 || now - fAdj < 3000) return;
+      const avg = fAcc / fN; fAcc = 0; fN = 0; fAdj = now;
+      let next = prNow;
+      if (avg > 28 && prNow > 1) { next = Math.max(1, prNow - 0.25); holdUntil = now + 30000; }
+      else if (avg < 18.5 && prNow < PR_MAX && now > holdUntil) next = Math.min(PR_MAX, prNow + 0.25);
+      if (next !== prNow) { prNow = next; renderer.setPixelRatio(prNow); renderer.setSize(VW, VH, false); }
+    }
+    let raf = 0, lastNow = 0; const t0 = performance.now();
     function frame(now) {
       raf = requestAnimationFrame(frame);
-      if (document.hidden) return;
-      const t = (now - t0) / 1000;
+      if (document.hidden) { lastNow = 0; fLast = 0; return; }
+      const t = (now - t0) / 1000, dt = lastNow ? Math.min(0.25, Math.max(0, (now - lastNow) / 1000)) : 0;
+      lastNow = now;
+      adapt(now);
       controls.update();
       for (const s of sensors.values()) {
         if (ALERT[s.state]) {
@@ -515,8 +1231,12 @@
           s.head.position.y = s.baseY + 15 + 2.2 + Math.sin(t * 4) * 0.7;
         } else if (s.ring.material.opacity) { s.ring.material.opacity = 0; s.ring.scale.set(1, 1, 1); }
       }
+      let vis = 1;
+      if (crowd && studentsOn) { vis = visScale(); crowd.setZones(smokeZones()); crowd.step(dt, vis); drawStudents(vis, t); }
+      if (now - shadowAt > 100) { renderer.shadowMap.needsUpdate = true; shadowAt = now; }
       renderer.render(scene, camera);
       placeLabels();
+      if (crowd) placeBubbles(vis);
     }
     raf = requestAnimationFrame(frame);
 
@@ -565,5 +1285,5 @@
     return api;
   }
 
-  root.AirfaroMap3D = { create, PALETTE };
+  root.AirfaroMap3D = { create, PALETTE, buildWalkGraph, makeCrowd };
 })(typeof window !== 'undefined' ? window : globalThis);
