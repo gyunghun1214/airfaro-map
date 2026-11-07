@@ -35,6 +35,11 @@
 [hidden] { display: none !important; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14.5px; line-height: 1.5; }
+/* 한 단어가 줄 끝에서 둘로 끊기지 않게, 한글도 띄어쓰기 자리에서만 줄을 바꿔요.
+   한 줄에 다 안 들어가는 아주 긴 낱말(좁은 화면의 주소 같은 것)만 마지막 수단으로 나눠요 */
+html { word-break: keep-all; overflow-wrap: break-word; }
+/* 괄호가 붙은 낱말(전압(mV)이고)은 괄호 앞뒤에서도 줄이 바뀔 수 있어서 한 덩어리로 묶어요 */
+.nw { white-space: nowrap; }
 .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .banner { padding-block: 7px; text-align: center; font-weight: 700; font-size: 13.5px; }
 .banner.example { background: var(--example-soft); color: var(--example); }
@@ -98,7 +103,10 @@ svg.spark { display: block; width: 100%; height: 64px; }
 .legend i { flex: none; width: 11px; height: 11px; border-radius: 50%; margin-top: 4px; }
 .notes { font-size: 12.5px; color: var(--muted); margin: 0; padding-left: 18px; display: grid; gap: 3px; }
 .howto { font-size: 12.5px; color: var(--muted); display: grid; gap: 6px; }
-.howto code { font-family: var(--f-num); font-size: 12px; background: var(--bg); padding: 1px 5px; border-radius: 4px; color: var(--ink); word-break: break-all; }
+.howto code { font-family: var(--f-num); font-size: 12px; background: var(--bg); padding: 1px 5px; border-radius: 4px; color: var(--ink); overflow-wrap: anywhere; }
+/* 아주 좁은 휴대폰(360px 아래)에서는 주소 글씨를 조금 줄여서 주소가 한 줄에 들어가게 해요 */
+@media (max-width: 359px) { .howto code { font-size: 10.5px; } }
+@media (max-width: 299px) { .howto code { font-size: 9.5px; } }
 .small { font-size: 12px; color: var(--muted); }
 .editbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; border-top: 1px solid var(--line); background: var(--accent-soft); font-size: 12.5px; }
 textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height: 110px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
@@ -186,7 +194,7 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
     <h2>이 지도를 읽을 때</h2>
     <ul class="notes">
       <li>판단 규칙은 장치와 수집 페이지에 넣은 초기 시험값과 같아요. 평소보다 먼지가 50mV, 가스가 40 이상 함께 오른 채 10초 넘게 이어지면 흡연 의심으로 봐요. 담배 연기로 검증한 기준은 아니고, 아직 실물 검증 전이에요.</li>
-      <li>먼지 값은 센서 출력 전압(mV)이고, 가스 값은 0~1023 사이 숫자예요. 니코틴 양이나 확률, 정확한 미세먼지(PM2.5) 농도가 아니에요.</li>
+      <li>먼지 값은 센서 출력 <span class="nw">전압(mV)이고,</span> 가스 값은 0~1023 사이 숫자예요. 니코틴 양이나 확률, 정확한 <span class="nw">미세먼지(PM2.5)</span> 농도가 아니에요.</li>
       <li>30초 넘게 값이 안 오면 회색 '수신 없음'으로 바꿔요. 값이 없을 때 초록으로 두지 않아요.</li>
       <li>장치를 켜거나 다시 연결하면 4분 동안 '기준 측정 전'이에요. 3분은 가스 센서 예열, 1분은 평소 공기를 재는 시간이에요.</li>
       <li>대운동장은 실제처럼 평평한 축구장으로, 정각원과 종각은 기와지붕 전통 건물로 그린 모형이에요. 둘레 땅 높이는 모형에 맞춰 고른 값이라 실제와 조금 달라요.</li>
@@ -197,8 +205,8 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
     <h2>실제 장치로 보려면</h2>
     <div class="howto">
       <div>1) 노트북에서 이 폴더를 열고 <code>node server.js</code>를 켜요.</div>
-      <div>2) Chrome으로 <code>http://localhost:8080/collector</code>를 열고 서버 주소 칸에 <code>http://localhost:8080/api/readings</code>를 넣은 뒤, 지점 ID(예: site-01)를 정하고 장치를 연결해요.</div>
-      <div>3) 지도는 <code>http://localhost:8080/</code>에서 5초마다 새 값을 읽어요. 같은 와이파이에 연결한 휴대폰에서는 서버 창에 나온 주소로 열어요.</div>
+      <div>2) Chrome으로 <code>http://localhost:8080/collector</code>를 열고 서버 주소 칸에 <code>http://localhost:8080/api/readings</code>를 넣은 뒤, 지점 ID(예: <span class="nw">site-01)를</span> 정하고 장치를 연결해요.</div>
+      <div>3) 지도는 <code>http://localhost:8080/</code>&#8288;에서 5초마다 새 값을 읽어요. 같은 와이파이에 연결한 휴대폰에서는 서버 창에 나온 주소로 열어요.</div>
     </div>
     <p class="small" id="staticNote" hidden style="margin:8px 0 0">지금 보는 페이지는 서버 없이 올린 미리 보기라 예시 모드만 나와요. 실제 값은 위 순서로 켠 지도에서 볼 수 있어요.</p>
   </section>
@@ -246,6 +254,8 @@ const sign = (v) => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const chipCls = (s) => (LIGHT_TEXT[s] ? ' light' : '');
 // 조사 고르기: 받침이 있으면 a, 없으면 b (이/가, 과/와). 한글로 끝나지 않으면 a
+// 괄호가 낱말에 붙은 자리(학림관(J)과)에서 줄이 바뀌지 않게 보이지 않는 이음표(U+2060)를 넣어요. 글자만 넣는 곳(textContent)에 써요
+const glue = (w) => String(w).replace(/(\S)\(/g, '$1\u2060(').replace(/\)(?=\S)/g, ')\u2060');
 const josa = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 === 0 ? b : a; };
 function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } return null; }
 
@@ -424,8 +434,8 @@ const isNight = () => { const t = document.documentElement.getAttribute('data-th
 function startMap() {
   const box = $('view3d');
   try {
-    if (!window.THREE || !window.THREE.OrbitControls) throw new Error('3D 그리기 도구(three.js)를 불러오지 못했어요. 인터넷 연결을 확인해 주세요');
-    if (!window.CAMPUS) throw new Error('캠퍼스 자료(campus-data.js)를 불러오지 못했어요');
+    if (!window.THREE || !window.THREE.OrbitControls) throw new Error('3D 지도를 그리는 three.js를 불러오지 못했어요. 인터넷 연결을 확인해 주세요');
+    if (!window.CAMPUS) throw new Error('캠퍼스 자료 campus-data.js를 불러오지 못했어요');
     map = window.AirfaroMap3D.create(box, window.CAMPUS, { stateColors: HEX, stateNames: Object.fromEntries(Object.entries(STATES).map(([k, v]) => [k, v[0]])),
                                                         night: isNight(), homeTarget: [-35, -5], homeDist: 520, quality: QUALITY, students: studentsWanted() });
   } catch (e) {
@@ -438,7 +448,7 @@ function startMap() {
     const list = mode === 'real' && serverSites ? serverSites : null;
     if (list) { const c = list.find((s) => s.id === id); if (c) Object.assign(c, { x, z, zone }); }
     else { localPos = localPos || {}; localPos[id] = { x, z, zone }; }
-    $('editMsg').textContent = `옮겼어요. ${zoneName ? zoneName + josa(zoneName, '과', '와') + ' 이어져요' : '30m 안에 건물이 없어서 바닥 원만 색이 바뀌어요'}. 저장을 눌러야 남아요.`;
+    $('editMsg').textContent = `옮겼어요. ${zoneName ? glue(zoneName + josa(zoneName, '과', '와')) + ' 이어져요' : '30m 안에 건물이 없어서 바닥 원만 색이 바뀌어요'}. 저장을 눌러야 남아요.`;
     refresh();
   };
   map.setSites(sitesConfig());
@@ -538,7 +548,7 @@ function drawDetail(st) {
     <div class="detail-head"><h3>${esc(s.name)}</h3><span class="id">${esc(s.id)}</span>
       <span class="bigstate${chipCls(L.state)}" style="background:${HEX[L.state]}">${STATES[L.state][0]}</span></div>
     <div class="small">${esc(s.place || '')}${L.never ? '' : ` · 마지막 수신 ${kstTime(L.last_at)}${mode === 'example' ? ' (예시 시각)' : ''} · 받은 줄 ${L.n_rx}`}</div>
-    <p class="zone">${zone && zone.name ? `흡연 의심이면 이어진 건물 <b>${esc(zone.name)}</b>${josa(zone.name, '이', '가')} 빨갛게 바뀌어요.` : zone ? '흡연 의심이면 이어진 건물(이름 없음)이 빨갛게 바뀌어요.' : '이어진 건물이 없어서 바닥 원만 색이 바뀌어요.'}</p>
+    <p class="zone">${zone && zone.name ? `흡연 의심이면 이어진 건물 <span class="nw"><b>${esc(zone.name)}</b>${josa(zone.name, '이', '가')}</span> 빨갛게 바뀌어요.` : zone ? '흡연 의심이면 이어진 이름 없는 건물이 빨갛게 바뀌어요.' : '이어진 건물이 없어서 바닥 원만 색이 바뀌어요.'}</p>
     <p class="why">${whyText(L)}</p>
     <div class="vals">
       <div class="v"><span>먼지 센서 출력</span><b>${L.never ? '-' : L.dust}</b><em>mV${run ? ' · 평소보다 ' + sign(L.d_dust) : ''}</em></div>

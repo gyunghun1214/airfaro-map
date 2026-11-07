@@ -385,9 +385,9 @@
   // ---------------------------------------------------------------- 지도 만들기
   function create(container, campus, opts) {
     opts = opts || {};
-    if (!T || !T.WebGLRenderer || !T.OrbitControls) throw new Error('3D 라이브러리(three.js)를 불러오지 못했어요');
+    if (!T || !T.WebGLRenderer || !T.OrbitControls) throw new Error('3D 지도를 그리는 three.js를 불러오지 못했어요');
     const okGL = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) { return false; } })();
-    if (!okGL) throw new Error('이 기기나 브라우저에서는 3D(WebGL)를 쓸 수 없어요');
+    if (!okGL) throw new Error('이 기기나 브라우저에서는 3D 그래픽 기능인 WebGL을 쓸 수 없어요');
 
     const wrap = document.createElement('div'); wrap.className = 'm3-wrap'; container.appendChild(wrap);
     const renderer = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: !!opts.preserve });
