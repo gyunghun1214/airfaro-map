@@ -13,7 +13,7 @@
     day: { sky: 0xe7ecee, fog: 0xe7ecee, skirt: '#8a7f70', skirtDark: '#6f665a',
            ground: '#b4b8b3', urban: '#aeb0aa', campus: '#bfc3bc', grass: '#82a95f', wood: '#5b8945', pitch: '#6aa64c', pitchLine: '#e4efdf', pitchAlt: '#5c9842', pitchOut: '#578c43', pitchMark: '#f4f8f2',
            parking: '#a6a9a6', plaza: '#d8d2c3', water: '#7fb7cf', road: '#4d5256', curb: '#dcd9d0', line: '#f2f1ea', path: '#e4dfd2', pathEdge: '#c2bba9', steps: '#cfc8b7',
-           wall: 0xeef0ec, wallBg: 0xcfd2cd, roof: 0x86a48f, roofAlt: 0xb3bab2, roofBg: 0xa9ada7, box: 0xe3e6e3, tradWall: 0xffffff, tradRoof: 0xffffff,
+           wall: 0xeef0ec, wallBg: 0xcfd2cd, roof: 0x86a48f, roofAlt: 0xb3bab2, roofBg: 0xa9ada7, box: 0xe3e6e3, tradWall: 0xffffff, tradRoof: 0xffffff, stoneWall: 0xffffff,
            tree: 0x3f7a30, treeAlt: 0x5a9442, trunk: 0x6b5a45, hemiSky: 0xffffff, hemiGround: 0x7d8278, hemi: 0.58, sun: 0.72,
            edge: 0x56626c, edgeOp: 0.3,
            window: 'rgba(110,140,162,0.55)', windowLit: null,
@@ -21,7 +21,7 @@
     night: { sky: 0x0d1921, fog: 0x0d1921, skirt: '#38332d', skirtDark: '#29251f',
              ground: '#2a343b', urban: '#262f35', campus: '#303c43', grass: '#2b4f35', wood: '#22412c', pitch: '#2e5a37', pitchLine: '#6a8a72', pitchAlt: '#2a5232', pitchOut: '#274b2f', pitchMark: '#93b49c',
              parking: '#323b41', plaza: '#454b4b', water: '#24485b', road: '#161b1f', curb: '#4d585e', line: '#8a949a', path: '#4a5255', pathEdge: '#394045', steps: '#525a5c',
-             wall: 0x75858f, wallBg: 0x48535a, roof: 0x4b665f, roofAlt: 0x5a6867, roofBg: 0x3b454b, box: 0x75828a, tradWall: 0x8f9aa2, tradRoof: 0x7f8a93,
+             wall: 0x75858f, wallBg: 0x48535a, roof: 0x4b665f, roofAlt: 0x5a6867, roofBg: 0x3b454b, box: 0x75828a, tradWall: 0x8f9aa2, tradRoof: 0x7f8a93, stoneWall: 0xbcc6d0,
              tree: 0x2d5636, treeAlt: 0x3a6540, trunk: 0x3a3229, hemiSky: 0xb3c5d6, hemiGround: 0x1d252a, hemi: 0.78, sun: 0.42,
              edge: 0x070d11, edgeOp: 0.5,
              window: 'rgba(38,52,62,0.9)', windowLit: 'rgba(255,212,140,0.9)',
@@ -162,16 +162,124 @@
   const SHIRT = [0x2f4a7a, 0xf1f1ec, 0x8c949c, 0x79c3b2, 0xe2b43f, 0xc94b40, 0x6aa3d8, 0xe79fb4, 0x2c2c2e, 0x4e8a5a, 0xf08a4b, 0x9b7fd1];
   const PANTS = [0x3b5878, 0x2a2a2c, 0xcbb894, 0x6c7177, 0x46566b, 0x8a6f5a];
   const BAG = [0x33475b, 0x8e44ad, 0xc0582b, 0x22313f, 0x1f8a76, 0x7c8a8c, 0xb83b5e];
+  // ---- 방문자가 꾸미는 캐릭터 (꾸밈용). 서버에는 번호만 둬요: look = [피부, 머리 색, 머리 모양, 윗옷, 바지, 가방, 모자, 모자 색, 안경], nick = [꾸밈말, 이름]
+  //      칸 수(LIMITS)는 공개 서버 handler.mjs 의 AVATAR_LIMITS · schema.sql 의 검사와 같아야 해요 (dev/avatar_check.mjs 가 비교해요)
+  const AVATAR = {
+    skin: SKIN, hair: [0x1c1a19, 0x2e231c, 0x4a3426, 0x6b4a2f, 0x9c7346, 0xc8a46e, 0x7b3b2a], style: ['짧은 머리', '긴 머리', '묶은 머리'],
+    shirt: SHIRT, pants: PANTS, bag: BAG, hat: ['모자 없음', '야구 모자', '비니'], hatColor: [0xc94b40, 0x2f4a7a, 0x2c2c2e, 0xf1f1ec, 0xe2b43f, 0x4e8a5a], glasses: ['안경 없음', '안경'],
+    names: {
+      skin: ['아주 밝은 피부', '밝은 피부', '중간 피부', '구릿빛 피부', '갈색 피부', '짙은 갈색 피부'],
+      hair: ['검은색', '짙은 갈색', '갈색', '밝은 갈색', '황갈색', '금발', '적갈색'],
+      shirt: ['남색', '흰색', '회색', '민트색', '노란색', '빨간색', '하늘색', '분홍색', '검은색', '초록색', '주황색', '보라색'],
+      pants: ['청색', '검은색', '베이지색', '회색', '짙은 청색', '갈색'],
+      bag: ['남색', '보라색', '주황색', '짙은 남색', '청록색', '회색', '자주색'],
+      hatColor: ['빨간색', '남색', '검은색', '흰색', '노란색', '초록색'],
+    },
+    LIMITS: [6, 7, 3, 12, 6, 8, 3, 6, 2],   // 가방은 0 = 없음, 1~7 = 색
+    adj: ['졸린', '바쁜', '신난', '배고픈', '느긋한', '용감한', '수줍은', '씩씩한', '궁금한', '반짝이는', '조용한', '엉뚱한',
+          '다정한', '부지런한', '행복한', '차분한', '명랑한', '꼼꼼한', '당당한', '상냥한', '날쌘', '포근한', '똑똑한', '즐거운'],
+    noun: ['코끼리', '연꽃', '다람쥐', '고양이', '강아지', '부엉이', '수달', '펭귄', '거북이', '토끼', '여우', '판다',
+           '고래', '참새', '너구리', '사슴', '은행잎', '단풍잎', '별', '구름', '호랑이', '곰', '두루미', '해바라기'],
+  };
+  const lookOk = (L) => Array.isArray(L) && L.length === 9 && L.every((v, i) => Number.isInteger(v) && v >= 0 && v < AVATAR.LIMITS[i]);
+  const nickOk = (k) => Array.isArray(k) && k.length === 2 && Number.isInteger(k[0]) && Number.isInteger(k[1]) && k[0] >= 0 && k[0] < AVATAR.adj.length && k[1] >= 0 && k[1] < AVATAR.noun.length;
+  const nickName = (k) => (nickOk(k) ? AVATAR.adj[k[0]] + ' ' + AVATAR.noun[k[1]] : '');
+  // 번호 → 그릴 색
+  function lookColors(L) {
+    if (!lookOk(L)) L = [1, 0, 0, 0, 0, 0, 0, 0, 0];
+    return { skin: AVATAR.skin[L[0]], hair: AVATAR.hair[L[1]], long: L[2] === 1, pony: L[2] === 2, shirt: AVATAR.shirt[L[3]], pants: AVATAR.pants[L[4]],
+             bag: L[5] ? AVATAR.bag[L[5] - 1] : 0, hat: L[6], hatColor: AVATAR.hatColor[L[7]], glasses: L[8] === 1 };
+  }
   const SMELL_TEXT = '아 담배 냄새!';
-  const TALK = ['안녕!', '점심 뭐 먹지?', '과제 했어?', '수업 늦겠다!', '오늘 날씨 좋다', '도서관 갈래?', '시험 언제야?'];
+  // ---- 학생들이 하는 말 (꾸밈용 가상 대화). 공기 · 연기 · 냄새 이야기는 하지 않아요.
+  //      흡연 의심 구역에서 하는 "아 담배 냄새!" 하나만 예외예요 (dev/crowd_check.js 가 낱말을 검사해요)
+  //   대화 한 묶음은 말하는 차례대로 적어요: [먼저 말한 학생, 받은 학생, 먼저 말한 학생]
+  //   장소 말은 가장 가까운 건물이나 장소(30m 안)에 맞춰 골라요. {n} 자리에는 그 건물 이름이 들어가요
+  const TALK = {
+    any: [
+      ['안녕!', '어, 안녕! 어디 가?', '수업 들으러 가'],
+      ['오랜만이다!', '진짜 오랜만이네', '나중에 밥 한번 먹자'],
+      ['과제 다 했어?', '아직 반도 못 했어', '같이 힘내자'],
+      ['리포트 냈어?', '어제 겨우 냈어'],
+      ['시험 언제야?', '다음 주 화요일이래', '벌써 그렇게 됐네'],
+      ['팀플 회의 몇 시야?', '4시 반이야', '고마워, 이따 봐'],
+      ['이번 주말에 뭐 해?', '집에서 푹 쉬려고', '부럽다'],
+      ['동아리 오늘 모여?', '응, 7시에', '그럼 이따 봐'],
+      ['출석 불렀어?', '아직 안 불렀어', '다행이다'],
+      ['수업 늦겠다!', '뛰어가자!'],
+      ['충전기 있어?', '응, 빌려줄게', '고마워!'],
+      ['조별 발표 언제지?', '목요일이야', '자료는 내가 만들게'],
+      ['방학 때 뭐 할 거야?', '여행 가고 싶어', '좋다, 어디로?'],
+      ['어제 경기 봤어?', '응, 완전 재밌었어'],
+      ['공강이야?', '응, 두 시간 비어', '카페 갈래?'],
+      ['교양 뭐 들어?', '심리학 들어', '나도 그거 들을걸'],
+      ['노트 좀 빌려줄 수 있어?', '응, 사진 찍어서 보내 줄게'],
+      ['오늘 몇 시에 끝나?', '4시에 끝나', '끝나고 연락해'],
+      ['새로 생긴 카페 가 봤어?', '아직, 같이 가 볼래?', '좋아!'],
+      ['어제 몇 시에 잤어?', '3시쯤…', '오늘은 일찍 자'],
+    ],
+    time: {
+      morning: [['1교시 있어?', '응, 9시 수업', '힘내자!'], ['아침 먹었어?', '커피만 마셨어'], ['졸려 죽겠다', '나도 밤새웠어'], ['일찍 왔네?', '버스가 빨리 왔어']],
+      lunch: [['점심 뭐 먹지?', '상록원 갈래?', '좋아!'], ['학식 메뉴 봤어?', '오늘 제육볶음이래', '가자!'], ['배고프다', '밥 먹으러 가자'], ['점심 먹었어?', '아직, 같이 먹을래?']],
+      afternoon: [['커피 한잔할래?', '좋지, 수업 끝나고'], ['3시 수업 어디야?', '명진관이야'], ['너무 졸리다', '아이스커피 마시자']],
+      evening: [['저녁 먹고 갈래?', '좋아, 뭐 먹을까?', '충무로 쪽으로 가자'], ['오늘 수업 끝!', '수고했어!'], ['집에 가?', '응, 지하철 타러']],
+      night: [['막차 몇 시지?', '11시 반쯤이야', '서둘러야겠다'], ['아직 학교야?', '과제 하느라고', '고생 많다'], ['배고프다', '편의점 갈래?']],
+    },
+    place: {
+      library: [['책 반납하러 가?', '응, 오늘까지야'], ['도서관 자리 있을까?', '시험 기간이라 없을걸'], ['열람실 갈래?', '좋아, 조용히 하자']],
+      food: [['오늘 학식 뭐야?', '김치찌개래', '맛있겠다'], ['줄 길다…', '조금만 기다리자'], ['여기 반찬 맛있어', '맞아, 자주 와']],
+      cafe: [['아메리카노 마실래?', '나는 라테!'], ['자리 있어?', '창가에 하나 있어']],
+      field: [['축구 한 판 할래?', '좋지!', '공 가져올게'], ['운동장 넓다!', '한 바퀴 뛸까?'], ['체육대회 연습한대', '응원하러 가자']],
+      temple: [['정각원은 조용해서 좋다', '마음이 편해져'], ['종 치는 거 본 적 있어?', '행사 때 봤어'], ['단청 색이 예쁘다', '사진 찍어 줄게']],
+      palj: [['코끼리상 앞에서 찍자', '좋아, 하나 둘 셋!'], ['불상이 멋있다', '팔정도 한가운데야'], ['여기서 만나자', '알았어, 5분 뒤에']],
+      plaza: [['잠깐 앉았다 갈까?', '좋아, 다리 아파'], ['여기서 만나자', '알았어, 5분 뒤에']],
+      eng: [['실험 보고서 썼어?', '반쯤 썼어'], ['코딩 과제 돌아가?', '오류만 나…', '같이 보자'], ['설계 과제 언제 내?', '금요일까지야'], ['실험실 가?', '응, 측정이 남았어']],
+      dorm: [['기숙사 들어가?', '응, 좀 쉬려고'], ['룸메이트랑 잘 지내?', '응, 착해'], ['택배 왔대', '빨리 가 보자']],
+      gym: [['운동하러 가?', '응, 농구하러'], ['체육 수업 있어?', '배드민턴 배워']],
+      club: [['동아리방 가?', '응, 회의 있어'], ['축제 준비 잘 돼?', '부스 거의 다 됐어', '보러 갈게!']],
+      office: [['서류 내러 왔어?', '응, 학적과에'], ['증명서 뽑았어?', '응, 금방 나오더라']],
+      museum: [['박물관 가 봤어?', '응, 전시 좋더라']],
+      lecture: [['강의실 몇 호야?', '3층 끝 방이야'], ['여기 엘리베이터 느려', '계단으로 가자'], ['{n}에서 수업 있어?', '응, 곧 시작해'], ['다음 수업도 여기야?', '응, 같은 건물이야']],
+    },
+  };
+  // 혼자 서 있을 때 떠올리는 생각 (점선 말풍선)
+  const THINK = {
+    any: ['과제가 몇 개더라…', '오늘 뭐 먹지…', '조금만 쉬자…', '집에 가고 싶다…', '다음 수업 어디더라…', '친구는 언제 오지…', '버스 몇 분 남았지…', '내일 1교시네…', '음악 뭐 듣지…'],
+    time: { morning: ['아직 졸려…', '커피 마시고 싶다…'], lunch: ['배고프다…', '학식 먹을까…'], afternoon: ['졸리다…'], evening: ['저녁 뭐 먹지…', '얼른 집에 가야지…'], night: ['막차 놓치면 안 돼…', '오늘도 늦었네…'] },
+    place: { library: ['자리 있으려나…', '책 반납해야 하는데…'], field: ['한 바퀴 뛸까…', '공 차고 싶다…'], temple: ['조용하다…', '마음이 차분해지네…'], food: ['오늘 메뉴 뭐지…', '줄 길면 어쩌지…'],
+             cafe: ['뭐 마시지…', '아메리카노 마실까…'], dorm: ['빨래해야지…', '방 청소해야 하는데…'], gym: ['오늘은 꼭 운동하자…', '샤워하고 가야지…'], eng: ['실험 결과가 왜 이러지…', '보고서 언제 쓰지…'],
+             lecture: ['다음 강의실이 어디더라…', '출석 부르기 전에 가야지…'], museum: ['전시 바뀌었나…', '언제 한번 들어가 봐야지…'], club: ['동아리방 열려 있으려나…', '회의 몇 시였지…'],
+             office: ['서류 내야 하는데…', '장학금 신청 언제까지지…'], palj: ['여기 걷기 좋다…', '오늘 하늘 맑네…'], plaza: ['여기서 만나기로 했는데…', '다들 어디 있지…'] },
+  };
+  const ARRIVE = { any: ['도착!', '여기 맞나?', '조금 일찍 왔네'], place: { library: ['자리 찾아보자'], food: ['줄이 별로 없네!'], cafe: ['여기 좋다'], lecture: ['강의실 찾았다'] } };
+  const PASS = { hi: ['안녕!', '어, 안녕!', '나중에 봐!', '안녕~'], back: ['안녕!', '응, 안녕!', '이따 봐!'] };
+  // 걸으면서 하는 전화 (한쪽 말만 보여요)
+  const CALL = ['응, 지금 가는 중이야', '어디야?', '5분이면 도착해', '응, 알겠어!', '이따 다시 전화할게'];
+  // 방문자가 세운 캐릭터에게 하는 인사와 캐릭터의 답
+  const GREET = { npc: ['안녕하세요!', '{nick}님, 안녕하세요!', '처음 보는 얼굴이네', '여기서 뭐 해요?', '반가워요!'], reply: ['안녕하세요!', '반가워요!', '구경하고 있어요', '안녕!'] };
+  // 건물 · 장소 이름으로 말할 거리를 골라요. 이름 없는 건물은 고르지 않아요
+  const PLACE_KINDS = [[/사회과학|경영관/, 'lecture'], [/도서관/, 'library'], [/식당|상록원/, 'food'], [/카페/, 'cafe'], [/운동장/, 'field'], [/정각원|종각/, 'temple'], [/팔정도/, 'palj'],
+    [/광장/, 'plaza'], [/공학|원흥|과학관|정보문화/, 'eng'], [/학사|기숙사/, 'dorm'], [/체육관/, 'gym'], [/학생회관/, 'club'], [/본관/, 'office'], [/박물관/, 'museum']];
+  function placeKind(name) { for (const [re, k] of PLACE_KINDS) if (re.test(name)) return k; return 'lecture'; }
+  function shortName(name) {
+    let s = String(name || '').replace(/\(.*?\)/g, '').replace(/^동국대\s*/, '').trim();
+    if (s.includes('.')) s = s.split('.').pop();
+    return s === 'MediaCenter' ? '미디어센터' : s;
+  }
+  const timeKind = (h) => (h >= 6 && h < 11 ? 'morning' : h >= 11 && h < 14 ? 'lunch' : h >= 14 && h < 18 ? 'afternoon' : h >= 18 && h < 22 ? 'evening' : 'night');
   function makeCrowd(G, o) {
     o = o || {};
     const rand = rng(o.seed || 1), pick = (a) => a[Math.floor(rand() * a.length)];
+    // 말은 따로 굴리는 주사위로 골라요. 무슨 말을 하든(시각이나 장소가 달라도) 걷는 길은 똑같아요
+    const trand = rng(((o.seed || 1) * 2654435761 + 977) >>> 0), tpick = (a) => a[Math.floor(trand() * a.length)];
     const nodes = G.nodes, edges = G.edges, NN = nodes.length;
     const N = NN >= 2 ? Math.max(0, Math.floor(o.count ?? 40)) : 0;
-    const MAX_SMELL = 4, MAX_TALK = 2, REACT_S = 1.7, SMELL_S = 2.8;
-    const npcs = [];
-    let zones = [], zoneSig = '', zoneEdges = new Map(), time = 0, spawned = false, chatClock = 0;
+    const MAX_SMELL = 4, MAX_AV_SMELL = 2, REACT_S = 1.7, SMELL_S = 2.8;
+    const MAX_TALK = Math.max(0, Math.floor(o.maxTalk ?? 4));   // 보이는 곳(focus)에 한 번에 뜨는 잡담 · 혼잣말 말풍선 수
+    const hourNow = typeof o.clock === 'function' ? o.clock : () => new Date(Date.now() + 9 * 3600e3).getUTCHours();   // 한국 시각 (시)
+    const places = (o.places || []).filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.z) && p.kind);
+    const npcs = [], convs = [];
+    let zones = [], zoneSig = '', zoneEdges = new Map(), time = 0, spawned = false, chatClock = 0, focus = null, avs = [], npcsOn = true;
     const dist = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz);
     const edgeBetween = (u, v) => { for (const ei of nodes[u].adj) { const e = edges[ei]; if ((e.a === u && e.b === v) || (e.b === u && e.a === v)) return e; } return null; };
     function nearestNode(x, z, maxD) {
@@ -190,6 +298,7 @@
       }));
       const live = new Set(zones.map((q) => q.id));
       for (const n of npcs) for (const id of [...n.mem.keys()]) if (!live.has(id)) n.mem.delete(id);   // 없어진 구역은 잊어요
+      for (const a of avs) for (const id of [...a.mem]) if (!live.has(id)) a.mem.delete(id);
     }
     // 가장 짧은 길 (마디 수가 작아 단순한 다익스트라로 충분해요). 기억한 구역 둘레 길은 30배 길게 쳐서 돌아가요
     function route(from, to, mem) {
@@ -293,32 +402,108 @@
         npcs.push({ id: i, x: nd.x, z: nd.z, rx: nd.x, rz: nd.z, ox: 0, oz: 0, h: rand() * Math.PI * 2, node, path: null, seg: 0, d: 0,
                     dirx: 0, dirz: 1, laneMax: 0, lane: rand() * 2 - 1, mode: 'idle', t: rand() * 2.5, pose: rand() < 0.5 ? 'phone' : 'look',
                     speed: 1.15 + rand() * 0.45, fast: false, phase: rand() * 6.28, say: null, mem: new Map(), talkCool: rand() * 20,
-                    reacts: 0, face: 0, partner: null, dest: -1, memS: 100 + rand() * 60, look: makeLook() });
+                    reacts: 0, face: 0, partner: null, dest: -1, memS: 100 + rand() * 60, look: makeLook(),
+                    pend: null, wave: 0, thinkCool: trand() * 12, greetCool: 0, said: 0, call: 0, callCool: trand() * 30 });
+      }
+    }
+    // ---- 말풍선
+    const inFocus = (x, z) => !focus || (Math.abs(x - focus.x) <= focus.r && Math.abs(z - focus.z) <= focus.r && dist(x, z, focus.x, focus.z) <= focus.r);
+    function placeAt(x, z) { let b = null, bd = 30; for (const p of places) { const d = dist(x, z, p.x, p.z) - (p.r || 0); if (d < bd) { bd = d; b = p; } } return b; }
+    // 말 고르기: 가까운 장소가 있으면 40%는 장소 이야기, 25%는 지금 시각에 맞는 이야기, 나머지는 어디서나 하는 이야기
+    function pickFrom(set, x, z) {
+      const pl = placeAt(x, z), r = trand(), tk = timeKind(hourNow());
+      let pool = null;
+      if (pl && set.place && set.place[pl.kind] && r < 0.4) pool = set.place[pl.kind];
+      else if (set.time && set.time[tk] && r < 0.65) pool = set.time[tk];
+      if (!pool || !pool.length) pool = set.any;
+      const line = tpick(pool), fill = (s) => s.replace('{n}', pl ? pl.short || pl.name : '여기');
+      return Array.isArray(line) ? line.map(fill) : fill(line);
+    }
+    // 말풍선 하나 띄우기. 보이는 곳에서는 잡담 · 혼잣말을 MAX_TALK 개까지만 띄우고, 냄새 반응 말풍선은 덮지 않아요
+    function say(n, text, kind, dur, cnt, conv) {
+      if (!npcsOn) return false;
+      const cur = n.say && time <= n.say.until ? n.say : null;
+      if (cur && cur.kind === 'smell') return false;
+      const f = inFocus(n.rx, n.rz);
+      if (f && !cur && cnt.talk >= MAX_TALK) return false;
+      if (f && !cur) cnt.talk++;
+      n.say = { text, kind, until: time + dur, at: time, conv: conv || null };
+      n.said++;
+      return true;
+    }
+    // 대화: 정해 둔 차례대로 한 줄씩. 다음 사람이 말하면 앞 사람 말풍선은 곧 닫혀요. 첫 줄을 못 띄우면(말풍선이 꽉 참) 끝까지 말없이 이야기해요
+    function runConvs(cnt) {
+      for (let i = convs.length - 1; i >= 0; i--) {
+        const c = convs[i];
+        if (c.k >= c.lines.length || c.a.mode !== 'chat' || c.b.mode !== 'chat' || c.a.partner !== c.b) { convs.splice(i, 1); continue; }
+        while (c.k < c.lines.length && time >= c.t0 + 0.4 + c.k * c.gap) {
+          const who = c.k % 2 ? c.b : c.a, other = c.k % 2 ? c.a : c.b;
+          if (other.say && other.say.conv === c) other.say.until = Math.min(other.say.until, time + 0.4);
+          if (!c.silent && !say(who, c.lines[c.k], 'talk', c.dur, cnt, c) && c.k === 0) c.silent = true;
+          if (!c.silent) c.shown++;
+          c.k++;
+        }
       }
     }
     function chats(cnt) {
+      if (!npcsOn) { for (const av of avs) av.watch = null; return; }   // 학생을 끈 동안에는 이야기 · 인사를 쉬어요
       for (let i = 0; i < npcs.length; i++) {
         const a = npcs[i]; if (a.mode !== 'walk' || a.talkCool > time) continue;
         for (let j = i + 1; j < npcs.length; j++) {
           const b = npcs[j]; if (b.mode !== 'walk' || b.talkCool > time) continue;
           if (Math.abs(a.rx - b.rx) > 2.2 || Math.abs(a.rz - b.rz) > 2.2 || dist(a.rx, a.rz, b.rx, b.rz) > 2.2) continue;
           a.talkCool = b.talkCool = time + 30 + rand() * 30;
-          if (rand() > 0.35) break;
-          const t = 3 + rand() * 3;
+          if (rand() > 0.35) {   // 멈추지 않고 지나가요. 가끔 손을 흔들며 인사해요
+            if (trand() < (inFocus(a.rx, a.rz) ? 0.5 : 0.3)) {
+              const [p, q] = trand() < 0.5 ? [a, b] : [b, a];
+              if (say(p, tpick(PASS.hi), 'talk', 1.7, cnt)) { p.wave = time + 1.4; if (trand() < 0.6) q.pend = { text: tpick(PASS.back), at: time + 0.8, dur: 1.6, wave: 1.2 }; }
+            }
+            break;
+          }
+          const t = 6 + rand() * 2.5;
           a.mode = b.mode = 'chat'; a.t = b.t = t; a.partner = b; b.partner = a;
-          if (cnt.talk < MAX_TALK) { const s = rand() < 0.5 ? a : b; s.say = { text: pick(TALK), kind: 'talk', until: time + Math.min(t, 3.2) }; cnt.talk++; }
+          const [p, q] = trand() < 0.5 ? [a, b] : [b, a];
+          const lines = pickFrom(TALK, (a.x + b.x) / 2, (a.z + b.z) / 2), gap = (t - 1.2) / lines.length;
+          convs.push({ a: p, b: q, lines, t0: time, gap, dur: Math.min(2.9, gap + 0.45), k: 0, silent: false, shown: 0 });
           break;
         }
       }
+      // 방문자 캐릭터: 가까이 걷는 학생을 바라보고, 옆을 지나가는 학생이 가끔 인사하면 손을 흔들며 답해요
+      for (const av of avs) {
+        let near = null, nd = 10;
+        for (const n of npcs) {
+          if (Math.abs(n.rx - av.x) > nd || Math.abs(n.rz - av.z) > nd) continue;
+          const d = dist(n.rx, n.rz, av.x, av.z); if (d < nd) { nd = d; near = n; }
+        }
+        av.watch = near ? Math.atan2(near.rx - av.x, near.rz - av.z) : null;
+        if (!near || nd > 3.2 || av.greetCool > time || av.react || near.mode !== 'walk' || near.greetCool > time || (near.say && time <= near.say.until)) continue;
+        near.greetCool = time + 50; av.greetCool = time + 9;
+        if (trand() >= 0.55) continue;
+        const pool = av.nick ? GREET.npc : GREET.npc.filter((s) => !s.includes('{nick}'));
+        if (say(near, tpick(pool).replace('{nick}', av.nick), 'talk', 2.3, cnt)) {
+          near.wave = time + 1.5;
+          av.pend = { text: tpick(GREET.reply), at: time + 1.2, dur: 2.1 };
+          av.waveFrom = time + 1.0; av.waveUntil = time + 3.3; av.greeted++;
+        }
+      }
+    }
+    // 방문자가 세운 캐릭터 (꾸밈용): 걷지 않고 서서 지나가는 학생들을 봐요. key 가 같으면 하던 동작을 이어 가요
+    function setAvatars(list) {
+      const old = new Map(avs.map((a) => [a.key, a]));
+      avs = (list || []).filter((a) => a && a.key !== undefined && Number.isFinite(a.x) && Number.isFinite(a.z)).map((a) => Object.assign(old.get(a.key) ||
+        { say: null, pend: null, waveFrom: 0, waveUntil: 0, greetCool: 0, mem: new Set(), react: false, watch: null, greeted: 0, face: 0 },
+        { key: a.key, x: a.x, z: a.z, h: Number.isFinite(a.h) ? a.h : 0, nick: a.nick || '' }));
     }
     // dt 초만큼 움직여요. vis = 화면에서 키운 배율 (멀리서 보면 학생을 크게 그려요 → 걸음도 그만큼 크게 · 조금 빠르게)
     function step(dt, vis) {
-      if (!N || !(dt > 0)) return;
-      if (!spawned) spawn();
+      if (!(dt > 0)) return;
+      if (!N && !avs.length) return;
+      if (!spawned && N) spawn();
       vis = Math.max(1, vis || 1);
       time += dt;
-      const cnt = { smell: 0, talk: 0 };
-      for (const n of npcs) if (n.say) { if (time > n.say.until) n.say = null; else cnt[n.say.kind]++; }
+      const cnt = { smell: 0, talk: 0, avSmell: 0 };
+      for (const n of npcs) if (n.say) { if (time > n.say.until) n.say = null; else if (n.say.kind === 'smell') cnt.smell++; else if (inFocus(n.rx, n.rz)) cnt.talk++; }
+      for (const a of avs) if (a.say) { if (time > a.say.until) a.say = null; else if (a.say.kind === 'smell') cnt.avSmell++; }
       for (const n of npcs) {
         if (n.mode !== 'react') for (const q of zones) {   // 냄새: 처음 들어간 흡연 의심 구역이면 반응해요
           const seen = n.mem.get(q.id);
@@ -326,19 +511,33 @@
           if (dist(n.x, n.z, q.x, q.z) > q.r) continue;
           n.mem.set(q.id, time);
           if (n.partner) { n.partner.partner = null; n.partner = null; }
-          n.mode = 'react'; n.t = REACT_S; n.fast = false;
+          n.mode = 'react'; n.t = REACT_S; n.fast = false; n.pend = null;
           n.face = Math.atan2(n.x - q.x, n.z - q.z);   // 구역 반대쪽으로 돌아서요
-          if (cnt.smell < MAX_SMELL) { n.say = { text: SMELL_TEXT, kind: 'smell', until: time + SMELL_S }; cnt.smell++; }
+          if (n.say && n.say.kind !== 'smell' && inFocus(n.rx, n.rz)) cnt.talk--;
+          if (cnt.smell < MAX_SMELL) { n.say = { text: SMELL_TEXT, kind: 'smell', until: time + SMELL_S, at: time }; cnt.smell++; }
+          else if (n.say && n.say.kind !== 'smell') n.say = null;
           n.reacts++;
           break;
         }
+        if (n.pend && time >= n.pend.at) { if (n.mode !== 'react' && say(n, n.pend.text, 'talk', n.pend.dur, cnt) && n.pend.wave) n.wave = time + n.pend.wave; n.pend = null; }
         if (n.mode === 'walk') {
           const m = n.speed * (n.fast ? 1.5 : 1) * (1 + 0.3 * (vis - 1)) * dt;
           const end = advance(n, m);
           n.phase += m / (0.62 * vis) * Math.PI;
-          if (end) { n.mode = 'idle'; n.t = 2 + rand() * 6; n.pose = rand() < 0.5 ? 'phone' : 'look'; n.fast = false; n.path = null; }
+          if (end) {
+            n.mode = 'idle'; n.t = 2 + rand() * 6; n.pose = rand() < 0.5 ? 'phone' : 'look'; n.fast = false; n.path = null;
+            if (!n.say && trand() < 0.14) say(n, pickFrom(ARRIVE, n.x, n.z), 'talk', 1.9, cnt);   // 도착하면 가끔 한마디
+          } else if (!n.say && !n.fast && n.callCool <= time && inFocus(n.rx, n.rz) && trand() < dt * 0.012) {   // 걸으면서 가끔 전화해요
+            n.callCool = time + 60 + trand() * 60;
+            if (say(n, tpick(CALL), 'talk', 2.6, cnt)) n.call = time + 2.6;
+          }
         } else if (n.mode === 'idle' || n.mode === 'chat') {
           n.t -= dt;
+          // 혼자 서 있으면 가끔 생각을 떠올려요 (보이는 곳에서 더 자주)
+          if (n.mode === 'idle' && !n.say && !n.pend && n.thinkCool <= time && trand() < dt * (inFocus(n.rx, n.rz) ? 0.12 : 0.015)) {
+            n.thinkCool = time + 16 + trand() * 20;
+            say(n, pickFrom(THINK, n.x, n.z), 'think', 2.8, cnt);
+          }
           if (n.t <= 0) {
             const resume = n.mode === 'chat' && n.path && n.seg < n.path.length - 1;
             if (n.partner && n.partner.partner === n) n.partner.partner = null;
@@ -362,6 +561,18 @@
         }
         n.rx = n.x + n.ox; n.rz = n.z + n.oz;
       }
+      // 방문자 캐릭터: 흡연 의심 구역 안이면 코를 막아요 (구역마다 한 번 "아 담배 냄새!")
+      for (const a of avs) {
+        let zq = null;
+        for (const q of zones) if (dist(a.x, a.z, q.x, q.z) <= q.r) { zq = q; break; }
+        a.react = !!zq;
+        if (zq && !a.mem.has(zq.id)) {
+          a.mem.add(zq.id); a.pend = null; a.face = Math.atan2(a.x - zq.x, a.z - zq.z);
+          if (cnt.avSmell < MAX_AV_SMELL) { a.say = { text: SMELL_TEXT, kind: 'smell', until: time + SMELL_S, at: time }; cnt.avSmell++; }
+        }
+        if (a.pend && time >= a.pend.at) { if (!a.react && !(a.say && a.say.kind === 'smell')) a.say = { text: a.pend.text, kind: 'talk', until: time + a.pend.dur, at: time }; a.pend = null; }
+      }
+      runConvs(cnt);
       chatClock += dt;
       if (chatClock >= 0.5) { chatClock = 0; chats(cnt); }
     }
@@ -370,15 +581,24 @@
       get count() { return N; },
       get time() { return time; },
       get zones() { return zones; },
-      setZones, step, nearestNode, route,
+      get avatars() { return avs; },
+      get convs() { return convs; },
+      setZones, step, nearestNode, route, setAvatars,
+      // 화면에 보이는 곳 (x, z 를 가운데로 반지름 r m). 잡담 말풍선 수는 이 안에서만 세요. r 이 없으면 캠퍼스 전체
+      setFocus(x, z, r) { focus = Number.isFinite(x) && Number.isFinite(z) && r > 0 ? { x, z, r } : null; },
+      // 학생 캐릭터를 화면에서 끄면 말 · 인사도 멈춰요 (걷기와 냄새 반응은 그대로 이어서, 다시 켜면 자연스럽게 이어져요)
+      setNpcsOn(on) { npcsOn = !!on; if (!npcsOn) { for (const n of npcs) if (n.say && n.say.kind !== 'smell') n.say = null; convs.length = 0; } },
+      placeAt,
       // 시험용: i 번 학생을 마디 node 에 세워요 (아무 것도 기억하지 않은 채 오래 서 있게)
       place(i, node, still) {
         if (!spawned) spawn();
         const n = npcs[i], nd = nodes[node]; if (!n || !nd) return false;
-        Object.assign(n, { x: nd.x, z: nd.z, rx: nd.x, rz: nd.z, ox: 0, oz: 0, node, path: null, seg: 0, d: 0, mode: 'idle', t: still ?? 30, say: null, fast: false, partner: null });
+        Object.assign(n, { x: nd.x, z: nd.z, rx: nd.x, rz: nd.z, ox: 0, oz: 0, node, path: null, seg: 0, d: 0, mode: 'idle', t: still ?? 30, say: null, pend: null, fast: false, partner: null });
         n.mem.clear();
         return true;
       },
+      // 시험용: 떠 있는 말풍선을 모두 지워요
+      quiet() { for (const n of npcs) { n.say = null; n.pend = null; } for (const a of avs) { a.say = null; a.pend = null; } convs.length = 0; },
     };
   }
 
@@ -756,6 +976,46 @@
       t.anisotropy = ANISO;
       return t;
     }
+    // 명진관 돌 벽 (기사: 회갈색 화강석으로 지은 튜더풍 고딕 석조 건물). 한 칸 = 가로 3.2m × 세로 3.6m 로 창문 그림과 같아요
+    //   돌은 높이가 들쭉날쭉한 줄로 쌓고, 창은 끝이 뾰족한 좁고 긴 창 하나 (창 모양은 글에 없어 고딕 건물에 흔한 모양으로 짐작했어요)
+    //   위쪽 띠(세로 3.0~3.5m)에는 창이 없어서 옥상 난간이 이 줄의 돌을 써요
+    function stoneTexture(p, lit) {
+      const S = WT, k = S / 256, cv = document.createElement('canvas'); cv.width = cv.height = S;
+      const g = cv.getContext('2d'), r = rng(735);
+      g.fillStyle = '#857b6f'; g.fillRect(0, 0, S, S);   // 줄눈
+      const stone = () => { const v = r(), w = (r() - 0.5) * 10; return `rgb(${Math.round(156 + v * 30 + w)},${Math.round(146 + v * 28)},${Math.round(131 + v * 26 - w)})`; };
+      // 줄 높이를 모두 더하면 S (위아래로 이어 붙여도 이음매가 없어요)
+      const rows = []; let y = 0;
+      while (y < S) { let hh = Math.round((18 + r() * 16) * k); if (S - (y + hh) < 16 * k) hh = S - y; rows.push([y, hh]); y += hh; }
+      const mort = Math.max(1, Math.round(2 * k));
+      for (const [y0, hh] of rows) {
+        // 줄마다 첫 경계 o 에서 S + o 까지 돌을 놓고, 오른쪽 끝을 넘는 돌은 왼쪽에도 그려요 (가로로 이어 붙여도 맞아요)
+        const o = Math.floor(r() * 40 * k), xs = [o];
+        while (xs[xs.length - 1] < S + o - 30 * k) xs.push(xs[xs.length - 1] + Math.round((30 + r() * 50) * k));
+        xs[xs.length - 1] = S + o;
+        for (let i = 0; i + 1 < xs.length; i++) { g.fillStyle = stone(); for (const dx of [0, -S]) g.fillRect(xs[i] + dx + mort / 2, y0 + mort / 2, xs[i + 1] - xs[i] - mort, hh - mort); }
+      }
+      for (let i = 0; i < 900 * k * k; i++) { g.fillStyle = r() < 0.5 ? 'rgba(60,52,44,0.18)' : 'rgba(235,228,214,0.16)'; g.fillRect(Math.floor(r() * S), Math.floor(r() * S), Math.max(1, Math.round(k)), Math.max(1, Math.round(k))); }   // 화강석 알갱이
+      // 창: 가로 0.9m, 아래 0.7m ~ 위 2.7m (꼭대기 0.5m 는 뾰족한 아치), 둘레에 다듬은 밝은 돌
+      const px = S / 3.2, py = S / 3.6, cx = S / 2, hw = 0.45 * px, yb = S - 0.7 * py, yt = S - 2.7 * py, ys = yt + 0.5 * py;
+      const arch = (pad) => {
+        g.beginPath(); g.moveTo(cx - hw - pad, yb + pad); g.lineTo(cx - hw - pad, ys);
+        g.quadraticCurveTo(cx - hw - pad, yt + 0.12 * py - pad, cx, yt - pad * 1.3); g.quadraticCurveTo(cx + hw + pad, yt + 0.12 * py - pad, cx + hw + pad, ys);
+        g.lineTo(cx + hw + pad, yb + pad); g.closePath();
+      };
+      g.fillStyle = '#bcb2a1'; arch(0.09 * px); g.fill();
+      const gr = g.createLinearGradient(0, yt, 0, yb);
+      gr.addColorStop(0, lit ? p.litTop : p.litTop ? p.glassTop : 'rgba(104,121,133,0.92)'); gr.addColorStop(1, lit ? p.litBot : p.litTop ? p.glassBot : 'rgba(62,75,86,0.92)');
+      g.fillStyle = '#2d3034'; arch(0); g.fill();
+      g.fillStyle = gr; arch(0); g.fill();
+      g.fillStyle = 'rgba(78,71,62,0.92)';
+      g.fillRect(Math.round(cx - k), ys - 0.1 * py, Math.max(1, Math.round(2 * k)), yb - ys + 0.1 * py);   // 가운데 돌 창살
+      g.fillRect(cx - hw, Math.round(yb - 0.75 * py), hw * 2, Math.max(1, Math.round(2 * k)));            // 가로 창살
+      g.fillStyle = '#c8beac'; g.fillRect(cx - hw - 0.14 * px, yb + 0.09 * px, (hw + 0.14 * px) * 2, Math.max(2, Math.round(0.08 * py)));   // 창턱
+      const t = new T.CanvasTexture(cv); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(1 / 3.2, 1 / 3.6);
+      t.anisotropy = ANISO;
+      return t;
+    }
     // 옥상 난간: 지붕 둘레에 얇은 벽(바깥 · 안 두 면). 창문 그림에서 벽색만 있는 줄(v = 3.24 → 0.9)을 써서 벽과 같은 색이에요
     const PH = 0.9;
     function parapetGeometry(rings, y0, h) {
@@ -781,7 +1041,7 @@
       g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
       return g;
     }
-    let texDay = null, texLit = null;
+    let texDay = null, texLit = null, stDay = null, stLit = null;
     const buildings = [];
     const roofBoxes = [];
     const edgePos = [];
@@ -795,6 +1055,59 @@
       return lo;
     }
 
+    // ---- 이름난 모습 (기사 · OSM 을 보고 비슷하게 만든 모형): 명진관 돌 벽과 가운데 탑 · 팔정도 불상과 코끼리상 · 옥상 정원
+    const tradMats = [];   // 낮 · 밤 색을 바꿀 재질
+    const landmarks = { mj: null, buddha: null, elephant: null, gardens: [] };
+    const LM_M = new T.Matrix4(), LM_Q = new T.Quaternion(), LM_P = new T.Vector3(), LM_S = new T.Vector3(1, 1, 1), LM_UP = new T.Vector3(0, 1, 0);
+    // 옥상 정원이 있는 건물 (기사: 중앙도서관 '하늘마루' (2021년 동대신문), 원흥관 · 상록원 (2010년 서울시 기사)). 이 건물들은 옥상 설비 상자 대신 정원을 그려요
+    const ROOF_GARDEN = /^(중앙도서관|원흥관|상록원)/;
+    // 명진관 (기사: 1958년 송민구 설계, 화강석 석조, 지상 5층 · 지하 1층, 가운데 4층 높이 탑 아래 아치 입구, 탑을 가운데 둔 좌우 대칭 튜더풍 고딕)
+    //   OSM 윤곽에서 북쪽(팔정도 쪽) 가운데로 튀어나온 칸이 탑 자리예요. 그 바깥 두 모서리(front)에서 안쪽으로 depth m 를 한 층쯤(rise) 더 올리고
+    //   꼭대기에 성가퀴(톱니 난간), 네 모서리에 조금 더 높은 돌기둥, 아래에 뾰족한 아치 문을 붙여요. 탑 꼭대기 · 문 크기는 글에 없어 짐작했어요
+    const MJ = { name: '명진관', front: [[-66.3, 55.6], [-57.9, 58.7]], depth: 9.5, rise: 4.6 };
+    const mjTrim = tradMat(0xa0958a, 0x51575b), mjDark = tradMat(0x2b2723, 0x15171a), mjDressed = tradMat(0xc3b9a7, 0x666b6d);
+    function addMyeongjin(b, base) {
+      const near = (q) => b.outer.reduce((m, p) => { const d = Math.hypot(p[0] - q[0], p[1] - q[1]); return d < m.d ? { d, p } : m; }, { d: Infinity, p: null });
+      const fa = near(MJ.front[0]), fb = near(MJ.front[1]);
+      if (!(fa.d < 2 && fb.d < 2)) return;   // OSM 윤곽이 바뀌어 탑 자리를 못 찾으면 탑 없이 둬요
+      const a = fa.p, c = fb.p, L = Math.hypot(c[0] - a[0], c[1] - a[1]), ex = (c[0] - a[0]) / L, ez = (c[1] - a[1]) / L;
+      let nx = -ez, nz = ex;   // 건물 안쪽을 보는 쪽
+      if ((b.c[0] - a[0]) * nx + (b.c[1] - a[1]) * nz < 0) { nx = -nx; nz = -nz; }
+      const o = 0.15, D = MJ.depth, top = b.top + MJ.rise;   // 탑을 0.15m 바깥으로 내어 아래 벽과 겹쳐 깜빡이지 않게
+      const at = (s, t) => [a[0] + ex * s + nx * t, a[1] + ez * s + nz * t];
+      const ring = [at(-o, -o), at(L + o, -o), at(L + o, D), at(-o, D)];
+      const shape = new T.Shape(ring.map(([x, z]) => new T.Vector2(x, -z)));
+      const geo = new T.ExtrudeGeometry(shape, { depth: top - base, bevelEnabled: false });
+      geo.rotateX(-Math.PI / 2); geo.translate(0, base, 0);
+      const tower = new T.Mesh(geo, [b.roof, b.wall]); tower.castShadow = tower.receiveShadow = true; tower.userData = b.mesh.userData; scene.add(tower);
+      const par = new T.Mesh(parapetGeometry([ring], top, PH), b.wall); par.castShadow = true; par.userData = b.mesh.userData; scene.add(par);
+      const eg = new T.EdgesGeometry(geo, 35), ea = eg.attributes.position.array;
+      for (let i = 0; i < ea.length; i++) edgePos.push(ea[i]);
+      eg.dispose();
+      // 성가퀴: 난간 위에 0.8m 돌을 1.5m 마다
+      const mers = [];
+      for (let i = 0; i < 4; i++) {
+        const p0 = ring[i], p1 = ring[(i + 1) % 4], len = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]), n = Math.max(2, Math.round((len - 0.8) / 1.5) + 1), yaw = Math.atan2(-(p1[1] - p0[1]), p1[0] - p0[0]);
+        for (let j = 0; j < n; j++) { const t = (0.4 + (len - 0.8) * j / (n - 1)) / len; mers.push([p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t, yaw]); }
+      }
+      const merM = new T.InstancedMesh(new T.BoxGeometry(0.8, 0.7, 0.42), mjTrim, mers.length);
+      mers.forEach(([x, z, yaw], i) => { LM_M.compose(LM_P.set(x, top + PH + 0.35, z), LM_Q.setFromAxisAngle(LM_UP, yaw), LM_S.set(1, 1, 1)); merM.setMatrixAt(i, LM_M); });
+      merM.castShadow = true; merM.userData = b.mesh.userData; scene.add(merM);
+      // 네 모서리 돌기둥: 버팀벽처럼 조금 튀어나오고 성가퀴보다 1m 높아요
+      const pierH = top + PH + 1.0 - base, piers = new T.InstancedMesh(new T.BoxGeometry(1.2, 1, 1.2), mjTrim, 4), yaw0 = Math.atan2(-ez, ex);
+      ring.forEach(([x, z], i) => { LM_M.compose(LM_P.set(x, base + pierH / 2, z), LM_Q.setFromAxisAngle(LM_UP, yaw0), LM_S.set(1, pierH, 1)); piers.setMatrixAt(i, LM_M); });
+      piers.castShadow = true; piers.userData = b.mesh.userData; scene.add(piers);
+      // 아치 문: 앞면 가운데 아래에 뾰족한 아치 (폭 3m · 높이 4.8m), 둘레에 다듬은 밝은 돌
+      const archShape = (w, h) => { const s = new T.Shape(), hw = w / 2; s.moveTo(-hw, 0); s.lineTo(-hw, h * 0.66); s.quadraticCurveTo(-hw, h * 0.92, 0, h); s.quadraticCurveTo(hw, h * 0.92, hw, h * 0.66); s.lineTo(hw, 0); s.closePath(); return s; };
+      const [fx, fz] = at(L / 2, -o), gy = hAt(fx, fz) - 0.1, faceYaw = Math.atan2(-nx, -nz);
+      for (const [w, h, mat, off] of [[3.8, 5.6, mjDressed, 0.03], [3.0, 4.8, mjDark, 0.06]]) {
+        const m = new T.Mesh(new T.ShapeGeometry(archShape(w, h), 8), mat);
+        m.position.set(fx - nx * off, gy, fz - nz * off); m.rotation.y = faceYaw; m.userData = b.mesh.userData; scene.add(m);
+      }
+      b.occ = [b.mesh, tower];
+      landmarks.mj = { id: b.id, ring, top, wingTop: b.top, base, front: [a, c], door: { x: fx, z: fz, y: gy, w: 3.0, h: 4.8 }, merlons: mers.length };
+    }
+
     // ---- 전통 건물 (정각원 · 동국대종각): 돌 기단 + 붉은 기둥 + 단청 띠 + 팔작지붕
     //   OSM 윤곽은 위에서 본 지붕(처마 끝)이라 기둥은 처마 안쪽(over m)에 세워요.
     //   처마 끝은 모서리로 갈수록 들리고(lift) 바깥으로 휘어요(flare). 지붕 면은 처마 쪽이 완만하고 위로 갈수록 가팔라요(오목)
@@ -803,7 +1116,6 @@
       hall: { over: [0.25, 1.6, 3], plat: 0.9, platOut: 1.4, col: 4.6, band: 1.1, colR: 0.32, bay: 4.4, eave: 5.3, lift: 1.0, flare: 0.7, ridge: 11.2, a: 0.52, thk: 0.38, gableOver: 0.45, ridgeW: 0.6, walls: true },
       pavilion: { over: [0.34, 0.9, 1.6], plat: 0.6, platOut: 0.6, col: 2.9, band: 0.55, colR: 0.2, bay: 2.6, eave: 3.0, lift: 0.5, flare: 0.35, ridge: 5.8, a: 0.52, thk: 0.24, gableOver: 0.25, ridgeW: 0.36, walls: false },
     };
-    const tradMats = [];   // 낮 · 밤 색을 바꿀 재질
     function tradMat(day, night, extra) { const m = new T.MeshLambertMaterial(Object.assign({ color: day }, extra || {})); tradMats.push({ mat: m, day, night }); return m; }
     function canvasTex(w, h, draw) { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h); const t = new T.CanvasTexture(cv); t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = ANISO; return t; }
     let TRAD_TEX = null;
@@ -977,8 +1289,9 @@
       eg.dispose();
       for (const r of rings) for (let i = 0; i < r.length; i++) { const a = r[i], b = r[(i + 1) % r.length]; edgePos.push(a[0], top + PH, a[1], b[0], top + PH, b[1]); }
       const c = centroid(outer), A = Math.abs(area(outer));
-      buildings.push({ id: bd.id, name: bd.name || '', bg: !!bd.bg, outer, c, A, top, mesh, wall, roof, alt, lit: hash(bd.id + 'L') % 3 !== 0 });
-      if (!bd.bg) {
+      buildings.push({ id: bd.id, name: bd.name || '', bg: !!bd.bg, outer, c, A, top, base, mesh, wall, roof, alt, lit: hash(bd.id + 'L') % 3 !== 0, skin: bd.name === MJ.name ? 'stone' : null });
+      if (bd.name === MJ.name) addMyeongjin(buildings[buildings.length - 1], base);
+      if (!bd.bg && !ROOF_GARDEN.test(bd.name || '') && bd.name !== MJ.name) {
         const r = rng(hash(bd.id)), n = Math.min(7, Math.floor(A / 320));
         const bb = bbox(outer);
         for (let k = 0, tries = 0; k < n && tries < 60; tries++) {
@@ -997,6 +1310,117 @@
     const M = new T.Matrix4(), Q = new T.Quaternion(), S = new T.Vector3(), P = new T.Vector3();
     roofBoxes.forEach((b, i) => { M.compose(P.set(b[0], b[1], b[2]), Q, S.set(b[3], b[4], b[5])); boxes.setMatrixAt(i, M); });
     boxes.count = roofBoxes.length; boxes.castShadow = true; scene.add(boxes);
+
+    // ---- 팔정도 청동 석가여래입상 (기사: 1964년 김영중 작, 팔정도 한가운데 · 명진관 앞, 연꽃 받침 위에 선 청동 불상, 오른손 시무외인 · 왼손 여원인)
+    //   자리 = 팔정도 한가운데 작은 고리 길(OSM 에서 닫힌 길)의 가운데. 키 · 받침 크기 · 바라보는 쪽은 글에 없어 짐작했어요 (북쪽)
+    const statueSpots = [];   // 캐릭터를 세울 수 없는 조각상 자리 { x, z, r }
+    const bronze = tradMat(0x76603f, 0x3d3427), granite = tradMat(0xd2cdc1, 0x5b6166);
+    function palCenter() {
+      const lab = (campus.labels || []).find((l) => l.name === '팔정도'); if (!lab) return null;
+      let best = null;
+      for (const rd of campus.roads || []) {
+        const p = ringPts(rd.pts); if (rd.k !== 'footway' || p.length < 4) continue;
+        const f = p[0], l = p[p.length - 1]; if (Math.hypot(f[0] - l[0], f[1] - l[1]) > 0.2) continue;
+        const ring = p.slice(0, -1), c = centroid(ring), A = Math.abs(area(ring)), d = Math.hypot(c[0] - lab.x, c[1] - lab.z);
+        if (A < 400 && d < 12 && (!best || d < best.d)) best = { x: c[0], z: c[1], d, r: Math.sqrt(A / Math.PI), from: 'ring' };
+      }
+      return best || { x: lab.x, z: lab.z, d: 0, r: 4, from: 'label' };
+    }
+    function statueGroup(x, z) {
+      const grp = new T.Group(), y0 = hMesh(x, z);
+      grp.position.set(x, y0, z); scene.add(grp);
+      const add = (geo, mat, px, py, pz, par) => { const m = new T.Mesh(geo, mat); m.position.set(px, py, pz); m.castShadow = true; m.receiveShadow = true; (par || grp).add(m); return m; };
+      return { grp, y0, add };
+    }
+    // 땅을 따라 휘는 얇은 판 (둥근 터 · 물길): 점마다 땅 높이 + lift
+    function groundSheet(cx, cz, y0, pts, tris, mat, lift) {
+      const pos = [];
+      for (const [x, z] of pts) pos.push(x, hMesh(cx + x, cz + z) - y0 + lift, z);
+      const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setIndex(tris); g.computeVertexNormals();
+      const m = new T.Mesh(g, mat); m.receiveShadow = true; return m;
+    }
+    function addBuddha() {
+      const pc = palCenter(); if (!pc) return;
+      const { grp, y0, add } = statueGroup(pc.x, pc.z);
+      add(new T.CylinderGeometry(2.3, 2.45, 1.2, 8), granite, 0, 0.3, 0);    // 아래 돌 단 (0.3m 는 땅속)
+      add(new T.CylinderGeometry(1.5, 1.65, 0.7, 8), granite, 0, 1.25, 0);   // 위 돌 단
+      add(new T.CylinderGeometry(0.95, 0.7, 0.4, 20), bronze, 0, 1.8, 0);    // 연꽃 받침: 둥근 판 + 바깥으로 벌어진 꽃잎 14장
+      const petal = new T.SphereGeometry(1, 8, 6); petal.scale(0.3, 0.2, 0.52); petal.translate(0, 0, 0.42);
+      for (let i = 0; i < 14; i++) { const m = add(petal, bronze, 0, 1.8, 0); m.rotation.y = i / 14 * Math.PI * 2; m.rotateX(-0.45); }
+      // 선 몸 (앞 = +z): 옷자락이 발까지 내려오는 모양을 돌림체로, 앞뒤로 조금 납작하게
+      const B0 = 2.0, prof = [[0, 0], [0.44, 0], [0.5, 0.18], [0.45, 0.9], [0.41, 1.45], [0.46, 2.05], [0.53, 2.5], [0.42, 2.72], [0.18, 2.83], [0.15, 2.93], [0, 2.95]].map(([r, h]) => new T.Vector2(r, h));
+      const body = add(new T.LatheGeometry(prof, 18), bronze, 0, B0, 0); body.scale.set(1, 1, 0.78);
+      add(new T.SphereGeometry(0.27, 14, 10), bronze, 0, B0 + 3.17, 0.02);   // 머리
+      add(new T.SphereGeometry(0.13, 10, 8), bronze, 0, B0 + 3.47, 0);       // 머리 위 볼록한 육계
+      const limb = (a, b, r) => { const v = new T.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]), m = add(new T.CylinderGeometry(r, r, v.length(), 8), bronze, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2); m.quaternion.setFromUnitVectors(LM_UP, v.normalize()); };
+      // 오른손 (몸의 오른쪽 = -x): 팔꿈치를 굽혀 손바닥을 앞으로 든 시무외인 · 왼손: 내려서 손바닥을 앞으로 편 여원인
+      limb([-0.47, B0 + 2.55, 0], [-0.5, B0 + 2.05, 0.05], 0.11); limb([-0.5, B0 + 2.05, 0.05], [-0.36, B0 + 2.45, 0.42], 0.1);
+      add(new T.BoxGeometry(0.17, 0.26, 0.06), bronze, -0.36, B0 + 2.62, 0.45);
+      limb([0.47, B0 + 2.55, 0], [0.52, B0 + 1.75, 0.12], 0.11); limb([0.52, B0 + 1.75, 0.12], [0.46, B0 + 1.45, 0.34], 0.1);
+      add(new T.BoxGeometry(0.17, 0.26, 0.06), bronze, 0.46, B0 + 1.32, 0.38);
+      grp.rotation.y = Math.PI;   // 북쪽(-z)을 봐요
+      statueSpots.push({ x: pc.x, z: pc.z, r: 2.8 });
+      landmarks.buddha = { x: pc.x, z: pc.z, y0, top: y0 + B0 + 3.6, from: pc.from, ringR: pc.r, d: pc.d };
+    }
+    // ---- 보현보살 코끼리상 (기사: 2001년 옛 분수 자리를 흙으로 메워 세움, 2019년 겨울 돌로 쌓은 작은 산과 개울을 더함, 졸업 때 학생들이 올라타요)
+    //   자리 = OSM 점 '코끼리동상'. 흰 코끼리로 그렸어요. 크기 · 바라보는 쪽은 글에 없어 짐작했어요 (불상 쪽)
+    function addElephant() {
+      const s = (campus.statues || []).find((q) => /코끼리/.test(q.name)); if (!s) return;
+      const { grp, y0, add } = statueGroup(s.x, s.z);
+      const rock = tradMat(0x9a958a, 0x4c4f52), white = tradMat(0xf0ede4, 0xa3a9ad), water = tradMat(0x86bcd2, 0x2a4f62, { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), soil = tradMat(0x86a463, 0x2e5136, { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+      // 옛 분수 자리: 둥근 풀밭 (반지름 4.2m)
+      const N = 28, disc = [[0, 0]], dt = [];
+      for (let i = 0; i <= N; i++) { const a = i / N * Math.PI * 2; disc.push([Math.cos(a) * 4.2, Math.sin(a) * 4.2]); if (i) dt.push(0, i + 1, i); }
+      grp.add(groundSheet(s.x, s.z, y0, disc, dt, soil, 0.05));
+      // 작은 개울: 돌 산 앞쪽을 반 바퀴 휘어 돌아요 (폭 0.7m)
+      const st = [], si = [], M2 = 18;
+      for (let i = 0; i <= M2; i++) { const a = -0.9 + i / M2 * 3.2; for (const rr of [2.75, 3.45]) st.push([Math.sin(a) * rr, Math.cos(a) * rr]); if (i) { const q = (i - 1) * 2; si.push(q, q + 1, q + 3, q, q + 3, q + 2); } }
+      const stream = groundSheet(s.x, s.z, y0, st, si, water, 0.09); grp.add(stream);
+      // 돌 산
+      const rg = new T.IcosahedronGeometry(1, 0);
+      for (const [x, y, z, sx, sy, sz, ry] of [[0, 0.35, 0, 2.1, 0.9, 1.7, 0.3], [1.3, 0.25, 0.8, 1.2, 0.7, 1.0, 1.1], [-1.4, 0.2, 0.6, 1.1, 0.6, 1.0, 2.0], [0.6, 0.2, -1.3, 1.2, 0.65, 0.9, 0.7], [-0.9, 0.3, -1.0, 1.0, 0.8, 0.9, 2.6]]) { const m = add(rg, rock, x, y, z); m.scale.set(sx, sy, sz); m.rotation.y = ry; }
+      // 코끼리 (앞 = +z): 몸 · 다리 · 머리 · 귀 · 코 · 상아 · 꼬리
+      const E = new T.Group(); E.position.y = 1.05; grp.add(E);
+      const bodyG = new T.SphereGeometry(1, 16, 12); bodyG.scale(0.95, 0.8, 1.45);
+      add(bodyG, white, 0, 1.75, 0, E);
+      const legG = new T.CylinderGeometry(0.3, 0.33, 1.25, 10); legG.translate(0, 0.62, 0);
+      for (const [x, z] of [[-0.52, 0.85], [0.52, 0.85], [-0.52, -0.85], [0.52, -0.85]]) add(legG, white, x, 0, z, E);
+      add(new T.SphereGeometry(0.62, 14, 10), white, 0, 2.15, 1.55, E);
+      const earG = new T.SphereGeometry(1, 10, 8); earG.scale(0.07, 0.55, 0.45);
+      for (const sx of [-1, 1]) { const m = add(earG, white, sx * 0.6, 2.2, 1.3, E); m.rotation.y = sx * 0.35; }
+      const trunk = new T.CatmullRomCurve3([new T.Vector3(0, 2.0, 2.05), new T.Vector3(0, 1.45, 2.35), new T.Vector3(0, 0.9, 2.35), new T.Vector3(0, 0.6, 2.55)]);
+      add(new T.TubeGeometry(trunk, 16, 0.15, 8, false), white, 0, 0, 0, E);
+      for (const sx of [-1, 1]) { const m = add(new T.ConeGeometry(0.06, 0.55, 8), white, sx * 0.25, 1.75, 2.15, E); m.rotation.x = 1.2; }
+      const tail = add(new T.CylinderGeometry(0.04, 0.05, 0.8, 6), white, 0, 1.6, -1.45, E); tail.rotation.x = 0.3;
+      const pb = landmarks.buddha; grp.rotation.y = pb ? Math.atan2(pb.x - s.x, pb.z - s.z) : 0;
+      statueSpots.push({ x: s.x, z: s.z, r: 3.2 });
+      landmarks.elephant = { x: s.x, z: s.z, y0, top: y0 + 1.05 + 2.77, osm: s.id };
+    }
+    addBuddha(); addElephant();
+    // ---- 옥상 정원: 지붕 가장자리 1.6m 를 남기고 2m 칸마다 풀을 심은 화단 (가끔 우드칩), 가끔 작은 나무 (2010년 기사: 여러해살이풀 · 떨기나무 · 작은 나무 · 우드칩). 경고 색으로 칠할 때는 감춰서 지붕 색이 잘 보이게 해요
+    const gardenMat = tradMat(0xffffff, 0x56655c, { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }), bushMat = tradMat(0x4c8538, 0x2b5434);
+    const bushGeo = new T.SphereGeometry(1, 7, 5);
+    for (const b of buildings) {
+      if (b.bg || b.trad || !ROOF_GARDEN.test(b.name)) continue;
+      const bb = bbox(b.outer), cell = 2, h = cell / 2 - 0.09, y = b.top + 0.08, pos = [], col = [], nor = [], idx = [], bush = [], r = rng(hash(b.id + 'G'));
+      for (let x = bb[0] + cell / 2; x < bb[2]; x += cell) for (let z = bb[1] + cell / 2; z < bb[3]; z += cell) {
+        if (!inside([x, z], b.outer) || distToRing([x, z], b.outer) < 1.6 + cell * 0.71) continue;
+        const o = pos.length / 3, q = r(), c = q < 0.42 ? [0.48, 0.63, 0.34] : q < 0.84 ? [0.44, 0.6, 0.31] : [0.56, 0.5, 0.37];   // 풀 두 가지 + 우드칩 깐 자리
+        pos.push(x - h, y, z - h, x + h, y, z - h, x + h, y, z + h, x - h, y, z + h);
+        for (let k = 0; k < 4; k++) { nor.push(0, 1, 0); col.push(c[0], c[1], c[2]); }
+        idx.push(o, o + 2, o + 1, o, o + 3, o + 2);
+        if (r() < 0.14) bush.push([x + (r() - 0.5) * 0.8, z + (r() - 0.5) * 0.8, 0.45 + r() * 0.45]);
+      }
+      if (!pos.length) continue;
+      const g = new T.BufferGeometry();
+      g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new T.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new T.Float32BufferAttribute(col, 3)); g.setIndex(idx);
+      const lawn = new T.Mesh(g, gardenMat); lawn.receiveShadow = true; lawn.userData = b.mesh.userData; scene.add(lawn);
+      const bushes = new T.InstancedMesh(bushGeo, bushMat, Math.max(1, bush.length));
+      bush.forEach(([x, z, s], i) => { LM_M.compose(LM_P.set(x, y + s * 0.55, z), LM_Q.identity(), LM_S.set(s, s * 0.75, s)); bushes.setMatrixAt(i, LM_M); });
+      bushes.count = bush.length; bushes.castShadow = true; scene.add(bushes);
+      b.garden = [lawn, bushes];
+      landmarks.gardens.push({ id: b.id, name: b.name, cells: pos.length / 12, bushes: bush.length, top: b.top, y });
+    }
 
     // ---- 나무: 빠른 컴퓨터는 둥근 덩어리 세 개를 붙인 나뭇잎(위가 조금 밝게), 휴대폰은 덩어리 하나
     function crownGeometry(hi) {
@@ -1145,79 +1569,113 @@
     }
 
     // ---- 학생 캐릭터 (꾸밈용 가상 인물): 몸 부분마다 InstancedMesh 하나 (다리 · 몸 · 팔 · 머리 · 눈 · 머리카락 · 가방 · 발밑 그림자)
+    //      방문자가 세운 캐릭터도 같은 몸을 쓰고, 모자 · 안경 · 묶은 머리를 더해요
     const walk = buildWalkGraph(campus);
     const STU_N = Math.max(0, Math.floor(opts.studentCount ?? (SMALL ? 24 : 56)));
-    const crowd = walk.nodes.length >= 2 && STU_N ? makeCrowd(walk, { count: STU_N, seed: opts.studentSeed || 20261107,
+    // 말할 거리를 고를 장소: 이름 있는 건물(넓이로 잰 반지름)과 팔정도 · 대운동장 · 만해광장
+    const talkPlaces = (campus.buildings || []).filter((b) => b.name && !b.bg).map((b) => {
+      const pts = ringPts(b.outer); if (pts.length < 3) return null;
+      const c = centroid(pts);
+      return { x: c[0], z: c[1], r: Math.sqrt(Math.abs(area(pts)) / Math.PI), kind: placeKind(b.name), name: b.name, short: shortName(b.name) };
+    }).filter(Boolean).concat((campus.labels || []).map((l) => ({ x: l.x, z: l.z, r: /운동장/.test(l.name) ? 45 : 18, kind: placeKind(l.name), name: l.name, short: l.name })));
+    const crowd = walk.nodes.length >= 2 ? makeCrowd(walk, { count: STU_N, seed: opts.studentSeed || 20261107, maxTalk: SMALL ? 2 : 4, places: talkPlaces, clock: opts.clock,
       hotspots: () => [...sensors.values()].filter((s) => s.placed).map((s) => ({ x: s.site.x, z: s.site.z })) }) : null;
     const stuGroup = new T.Group(); scene.add(stuGroup);
-    const parts = [];
-    let blob = null;
+    const avGroup = new T.Group(); scene.add(avGroup);
+    const parts = [], avParts = [];
+    let blob = null, avBlob = null;
     const ZERO = new T.Matrix4().makeScale(0, 0, 0);
-    if (crowd) {
-      const stuMat = new T.MeshLambertMaterial({ color: 0xffffff });
-      const box = (w, h, d, x, y, z) => { const g = new T.BoxGeometry(w, h, d); g.translate(x, y, z); return g; };
-      const torsoGeo = new T.CylinderGeometry(0.2, 0.24, 0.58, 10); torsoGeo.translate(0, 1.0, 0);
-      const headGeo2 = new T.SphereGeometry(0.27, 12, 9); headGeo2.translate(0, 0.26, 0);
-      const hairGeo = new T.SphereGeometry(0.292, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.56); hairGeo.rotateX(-0.3); hairGeo.translate(0, 0.275, -0.015);
-      const eyeGeo = (() => {   // 눈 두 개 (가까이 볼 때만 보여요)
-        const a = new T.SphereGeometry(0.034, 6, 4), b = a.clone(); a.translate(0.088, 0.29, 0.245); b.translate(-0.088, 0.29, 0.245);
-        const pos = [...a.attributes.position.array, ...b.attributes.position.array], nor = [...a.attributes.normal.array, ...b.attributes.normal.array];
-        const off = a.attributes.position.count, idx = [...a.index.array, ...[...b.index.array].map((i) => i + off)];
-        const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new T.Float32BufferAttribute(nor, 3)); g.setIndex(idx);
-        a.dispose(); b.dispose(); return g;
-      })();
-      const DEF = [
-        ['legL', box(0.15, 0.72, 0.17, 0, -0.36, 0), 'pants', [0.1, 0.74, 0]],
-        ['legR', box(0.15, 0.72, 0.17, 0, -0.36, 0), 'pants', [-0.1, 0.74, 0]],
-        ['torso', torsoGeo, 'shirt', null],
-        ['armL', box(0.11, 0.52, 0.12, 0, -0.25, 0), 'shirt', [0.285, 1.24, 0]],
-        ['armR', box(0.11, 0.52, 0.12, 0, -0.25, 0), 'shirt', [-0.285, 1.24, 0]],
-        ['head', headGeo2, 'skin', [0, 1.3, 0]],
-        ['eyes', eyeGeo, 'eye', [0, 1.3, 0]],
-        ['hair', hairGeo, 'hair', [0, 1.3, 0]],
-        ['hairBack', box(0.46, 0.36, 0.12, 0, 0.13, -0.2), 'hair', [0, 1.3, 0]],
-        ['bag', box(0.3, 0.36, 0.15, 0, 1.03, -0.215), 'bag', null],
-      ];
-      for (const [name, geo, role, pivot] of DEF) {
-        const m = new T.InstancedMesh(geo, stuMat, STU_N); m.receiveShadow = true; m.userData.kind = 'student';
-        stuGroup.add(m);
-        parts.push({ name, mesh: m, role, pivot: pivot ? new T.Vector3(pivot[0], pivot[1], pivot[2]) : null });
+    const stuMat = new T.MeshLambertMaterial({ color: 0xffffff });
+    const box = (w, h, d, x, y, z) => { const g = new T.BoxGeometry(w, h, d); g.translate(x, y, z); return g; };
+    // 여러 도형을 하나로 합쳐요 (색이 같은 한 부분)
+    function mergeGeo(list) {
+      const pos = [], nor = [], idx = []; let off = 0;
+      for (const g of list) {
+        const P = g.attributes.position, Nn = g.attributes.normal;
+        for (let i = 0; i < P.count; i++) { pos.push(P.getX(i), P.getY(i), P.getZ(i)); nor.push(Nn.getX(i), Nn.getY(i), Nn.getZ(i)); }
+        if (g.index) for (let i = 0; i < g.index.count; i++) idx.push(g.index.getX(i) + off); else for (let i = 0; i < P.count; i++) idx.push(i + off);
+        off += P.count; g.dispose();
       }
+      const out = new T.BufferGeometry(); out.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); out.setAttribute('normal', new T.Float32BufferAttribute(nor, 3)); out.setIndex(idx);
+      return out;
+    }
+    const torsoGeo = new T.CylinderGeometry(0.2, 0.24, 0.58, 10); torsoGeo.translate(0, 1.0, 0);
+    const headGeo2 = new T.SphereGeometry(0.27, 12, 9); headGeo2.translate(0, 0.26, 0);
+    const hairGeo = new T.SphereGeometry(0.292, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.56); hairGeo.rotateX(-0.3); hairGeo.translate(0, 0.275, -0.015);
+    const eyeGeo = (() => { const a = new T.SphereGeometry(0.034, 6, 4), b = a.clone(); a.translate(0.088, 0.29, 0.245); b.translate(-0.088, 0.29, 0.245); return mergeGeo([a, b]); })();   // 눈 두 개 (가까이 볼 때만 보여요)
+    const legGeo = box(0.15, 0.72, 0.17, 0, -0.36, 0), armGeo = box(0.11, 0.52, 0.12, 0, -0.25, 0);
+    const hairBackGeo = box(0.46, 0.36, 0.12, 0, 0.13, -0.2), bagGeo = box(0.3, 0.36, 0.15, 0, 1.03, -0.215);
+    const BODY = [
+      ['legL', legGeo, 'pants', [0.1, 0.74, 0]], ['legR', legGeo, 'pants', [-0.1, 0.74, 0]], ['torso', torsoGeo, 'shirt', null],
+      ['armL', armGeo, 'shirt', [0.285, 1.24, 0]], ['armR', armGeo, 'shirt', [-0.285, 1.24, 0]],
+      ['head', headGeo2, 'skin', [0, 1.3, 0]], ['eyes', eyeGeo, 'eye', [0, 1.3, 0]], ['hair', hairGeo, 'hair', [0, 1.3, 0]],
+      ['hairBack', hairBackGeo, 'hair', [0, 1.3, 0]], ['bag', bagGeo, 'bag', null],
+    ];
+    // 방문자 캐릭터만: 묶은 머리 · 야구 모자 · 비니 · 안경 (얼굴은 +z 쪽)
+    const ponyGeo = (() => { const a = new T.SphereGeometry(0.075, 8, 6); a.translate(0, 0.37, -0.29); const b = box(0.12, 0.3, 0.1, 0, 0.2, -0.33); return mergeGeo([a, b]); })();
+    const capGeo = (() => { const a = new T.SphereGeometry(0.302, 14, 6, 0, Math.PI * 2, 0, Math.PI * 0.5); a.rotateX(-0.1); a.translate(0, 0.3, -0.01); const b = box(0.3, 0.03, 0.22, 0, 0.33, 0.3); return mergeGeo([a, b]); })();
+    const beanieGeo = (() => {
+      const a = new T.SphereGeometry(0.306, 14, 7, 0, Math.PI * 2, 0, Math.PI * 0.55); a.translate(0, 0.28, -0.01);
+      const b = new T.CylinderGeometry(0.315, 0.315, 0.085, 14, 1, true); b.translate(0, 0.25, -0.01);
+      const c = new T.SphereGeometry(0.07, 8, 6); c.translate(0, 0.62, -0.02);
+      return mergeGeo([a, b, c]);
+    })();
+    const glassGeo = mergeGeo([box(0.12, 0.08, 0.02, 0.088, 0.29, 0.272), box(0.12, 0.08, 0.02, -0.088, 0.29, 0.272), box(0.06, 0.016, 0.016, 0, 0.3, 0.276)]);
+    const AV_BODY = BODY.concat([['pony', ponyGeo, 'hair', [0, 1.3, 0]], ['cap', capGeo, 'hat', [0, 1.3, 0]], ['beanie', beanieGeo, 'hat', [0, 1.3, 0]], ['glasses', glassGeo, 'glass', [0, 1.3, 0]]]);
+    const blobMat = (() => {
       const bc = document.createElement('canvas'); bc.width = bc.height = 64;
       const bctx = bc.getContext('2d'), grd = bctx.createRadialGradient(32, 32, 2, 32, 32, 31);
       grd.addColorStop(0, 'rgba(0,0,0,0.55)'); grd.addColorStop(1, 'rgba(0,0,0,0)'); bctx.fillStyle = grd; bctx.fillRect(0, 0, 64, 64);
-      const blobGeo = new T.PlaneGeometry(1, 1); blobGeo.rotateX(-Math.PI / 2);
-      blob = new T.InstancedMesh(blobGeo, new T.MeshBasicMaterial({ map: new T.CanvasTexture(bc), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -16 }), STU_N);
-      blob.renderOrder = 12; stuGroup.add(blob);
+      return new T.MeshBasicMaterial({ map: new T.CanvasTexture(bc), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -16 });
+    })();
+    const blobGeo = new T.PlaneGeometry(1, 1); blobGeo.rotateX(-Math.PI / 2);
+    // InstancedMesh 는 첫 도형 자리(캠퍼스 가운데)로 화면 안팎을 따져서, 끄지 않으면 가운데가 화면 밖일 때 사람이 통째로 사라져요
+    function bodyMeshes(def, group, n, out, kind) {
+      for (const [name, geo, role, pivot] of def) {
+        const m = new T.InstancedMesh(geo, stuMat, n); m.receiveShadow = true; m.frustumCulled = false; m.userData.kind = kind;
+        group.add(m);
+        out.push({ name, mesh: m, role, pivot: pivot ? new T.Vector3(pivot[0], pivot[1], pivot[2]) : null });
+      }
+      const b = new T.InstancedMesh(blobGeo, blobMat, n); b.renderOrder = 12; b.frustumCulled = false; group.add(b);
+      return b;
     }
-    let studentsOn = !!crowd && opts.students !== false;
+    if (crowd && STU_N) blob = bodyMeshes(BODY, stuGroup, STU_N, parts, 'student');
+    const AV_MAX = 320;   // 공개 서버는 300명까지 받아요
+    avBlob = bodyMeshes(AV_BODY, avGroup, AV_MAX, avParts, 'avatar');
+    for (const p of avParts) p.mesh.count = 0;
+    avBlob.count = 0;
+    let studentsOn = !!crowd && STU_N > 0 && opts.students !== false;
     stuGroup.visible = studentsOn;
     let colored = false;
-    function colorStudents(list) {
+    const roleColor = (L, role) => (role === 'eye' ? 0x2a2522 : role === 'glass' ? 0x1f1f22 : role === 'bag' ? (L.bag || 0x333333) : role === 'hat' ? (L.hatColor || 0x333333) : L[role]);
+    function colorBodies(ps, list) {
       const c = new T.Color();
-      for (const part of parts) {
-        list.forEach((n, i) => {
-          const L = n.look, v = part.role === 'eye' ? 0x2a2522 : part.role === 'bag' ? (L.bag || 0x333333) : L[part.role];
-          part.mesh.setColorAt(i, c.setHex(v));
-        });
+      for (const part of ps) {
+        list.forEach((n, i) => part.mesh.setColorAt(i, c.setHex(roleColor(n.look, part.role))));
         if (part.mesh.instanceColor) part.mesh.instanceColor.needsUpdate = true;
       }
     }
-    // 멀리서 볼수록 학생을 크게 그려요 (가까이 보면 1.15배, 245m 넘게 멀리서 보면 3배까지) → 캠퍼스 전체를 볼 때도 걷는 모습이 보여요
+    // 멀리서 볼수록 사람을 크게 그려요 (가까이 보면 1.15배, 245m 넘게 멀리서 보면 3배까지) → 캠퍼스 전체를 볼 때도 걷는 모습이 보여요
     const visScale = () => Math.max(1.15, Math.min(3, 0.55 + camera.position.distanceTo(controls.target) / 100));
     // 흡연 의심(SMOKE)인 센서 둘레만 냄새 구역이에요. 판단 보류(수증기일 수 있음) · 공기 변화에는 반응하지 않아요
     const smokeZones = () => { const z = []; for (const s of sensors.values()) if (s.state === 'SMOKE' && s.placed) z.push({ id: s.site.id, x: s.site.x, z: s.site.z, r: s.R + 10 }); return z; };
+    const POSE0 = () => ({ legL: 0, legR: 0, armLx: 0, armLz: 0.06, armRx: 0, armRz: -0.06, head: 0, yaw: 0, bob: 0, lean: 0 });
+    const NOSE = (p, t) => { p.armRx = -2.45; p.armRz = -0.5; p.armLx = -0.35; p.armLz = 0.25; p.head = -0.12; p.lean = -0.1; p.bob = Math.abs(Math.sin(t * 9)) * 0.02; };   // 코 막기
+    const WAVE = (p, t) => { p.armRx = -2.75; p.armRz = -0.3 + 0.32 * Math.sin(t * 11); };   // 손 흔들기
     function poseOf(n, t) {
-      const p = { legL: 0, legR: 0, armLx: 0, armLz: 0.06, armRx: 0, armRz: -0.06, head: 0, bob: 0, lean: 0 };
+      const p = POSE0(), now = crowd.time;
       if (n.mode === 'walk') {
         const A = n.fast ? 0.62 : 0.45, s = Math.sin(n.phase);
         p.legL = A * s; p.legR = -A * s; p.armLx = -0.8 * A * s; p.armRx = 0.8 * A * s; p.bob = Math.abs(Math.cos(n.phase)) * 0.035;
         if (n.fast && n.say && n.say.kind === 'smell') { p.armRx = -2.45; p.armRz = -0.5; }   // 달아나면서도 코를 막아요
-      } else if (n.mode === 'react') {   // 코 막기: 오른손을 얼굴 앞으로, 몸을 조금 뒤로
-        p.armRx = -2.45; p.armRz = -0.5; p.armLx = -0.35; p.armLz = 0.25; p.head = -0.12; p.lean = -0.1; p.bob = Math.abs(Math.sin(t * 9)) * 0.02;
-      } else if (n.mode === 'chat') {
+        else if (n.wave > now) WAVE(p, t);
+        else if (n.call > now) { p.armRx = -2.55; p.armRz = -0.2; p.head = 0.05; }   // 걸으며 전화: 오른손을 귀에
+      } else if (n.mode === 'react') NOSE(p, t);
+      else if (n.mode === 'chat') {
         p.armLx = -0.35 + 0.25 * Math.sin(t * 3 + n.id); p.head = 0.08 * Math.sin(t * 2.3 + n.id);
-      } else if (n.pose === 'phone') {   // 휴대폰 보기
+        if (n.say && n.say.kind === 'talk' && now - n.say.at < 2.2) { p.armRx = -0.55 + 0.35 * Math.sin(t * 5 + n.id); p.armRz = -0.15; p.head += 0.06; }   // 말하는 쪽은 손짓을 해요
+      } else if (n.say && n.say.kind === 'think') { p.armRx = -2.0; p.armRz = -0.75; p.armLx = -0.5; p.armLz = 0.2; p.head = 0.14; }   // 생각: 턱에 손
+      else if (n.pose === 'phone') {   // 휴대폰 보기
         p.armRx = -1.25; p.armRz = -0.3; p.armLx = -0.9; p.armLz = 0.32; p.head = 0.32;
       } else p.head = 0.05 * Math.sin(t * 0.7 + n.id);
       return p;
@@ -1225,40 +1683,153 @@
     const Mroot = new T.Matrix4(), Mloc = new T.Matrix4(), Mout = new T.Matrix4(), E1 = new T.Euler(), E2 = new T.Euler();
     const FOOT = 0.14, UP = new T.Vector3(0, 1, 0);
     const Q1 = new T.Quaternion(), Q2 = new T.Quaternion(), V1 = new T.Vector3(), V2 = new T.Vector3(), ONE = new T.Vector3(1, 1, 1);
+    // 한 사람(i 번째)의 몸 부분 자리를 정해요
+    function drawBody(ps, bl, i, x, z, h, p, vis, L) {
+      const y = hMesh(x, z);
+      Q1.setFromEuler(E1.set(p.lean, h, 0, 'YXZ'));
+      Mroot.compose(V1.set(x, y + FOOT + p.bob * vis, z), Q1, V2.set(vis, vis, vis));
+      for (const part of ps) {
+        let ax = 0, az = 0, ay = 0, hide = false;
+        switch (part.name) {
+          case 'legL': ax = p.legL; break;
+          case 'legR': ax = p.legR; break;
+          case 'armL': ax = p.armLx; az = p.armLz; break;
+          case 'armR': ax = p.armRx; az = p.armRz; break;
+          case 'head': case 'hair': case 'eyes': ax = p.head; ay = p.yaw; break;
+          case 'hairBack': ax = p.head; ay = p.yaw; hide = !L.long; break;
+          case 'pony': ax = p.head; ay = p.yaw; hide = !L.pony; break;
+          case 'cap': ax = p.head; ay = p.yaw; hide = L.hat !== 1; break;
+          case 'beanie': ax = p.head; ay = p.yaw; hide = L.hat !== 2; break;
+          case 'glasses': ax = p.head; ay = p.yaw; hide = !L.glasses; break;
+          case 'bag': hide = !L.bag; break;
+          default: break;
+        }
+        if (hide) { part.mesh.setMatrixAt(i, ZERO); continue; }
+        if (part.pivot) { Q2.setFromEuler(ay ? E2.set(ax, ay, az, 'YXZ') : E2.set(ax, 0, az, 'ZYX')); Mloc.compose(part.pivot, Q2, ONE); Mout.multiplyMatrices(Mroot, Mloc); part.mesh.setMatrixAt(i, Mout); }
+        else part.mesh.setMatrixAt(i, Mroot);
+      }
+      const gx = hAt(x - 1, z) - hAt(x + 1, z), gz = hAt(x, z - 1) - hAt(x, z + 1);
+      Q2.setFromUnitVectors(UP, V2.set(gx, 2, gz).normalize());
+      Mout.compose(V1.set(x, y + 0.18, z), Q2, V2.set(0.95 * vis, 1, 0.95 * vis)); bl.setMatrixAt(i, Mout);
+    }
+    const bodyDone = (ps, bl) => { for (const part of ps) part.mesh.instanceMatrix.needsUpdate = true; bl.instanceMatrix.needsUpdate = true; };
     function drawStudents(vis, t) {
       const list = crowd.npcs;
-      if (!colored && list.length) { colorStudents(list); colored = true; }
-      for (let i = 0; i < list.length; i++) {
-        const n = list[i], p = poseOf(n, t), y = hMesh(n.rx, n.rz);
-        Q1.setFromEuler(E1.set(p.lean, n.h, 0, 'YXZ'));
-        Mroot.compose(V1.set(n.rx, y + FOOT + p.bob * vis, n.rz), Q1, V2.set(vis, vis, vis));
-        for (const part of parts) {
-          let ax = 0, az = 0, hide = false;
-          switch (part.name) {
-            case 'legL': ax = p.legL; break;
-            case 'legR': ax = p.legR; break;
-            case 'armL': ax = p.armLx; az = p.armLz; break;
-            case 'armR': ax = p.armRx; az = p.armRz; break;
-            case 'head': case 'hair': case 'eyes': ax = p.head; break;
-            case 'hairBack': ax = p.head; hide = !n.look.long; break;
-            case 'bag': hide = !n.look.bag; break;
-            default: break;
-          }
-          if (hide) { part.mesh.setMatrixAt(i, ZERO); continue; }
-          if (part.pivot) { Q2.setFromEuler(E2.set(ax, 0, az, 'ZYX')); Mloc.compose(part.pivot, Q2, ONE); Mout.multiplyMatrices(Mroot, Mloc); part.mesh.setMatrixAt(i, Mout); }
-          else part.mesh.setMatrixAt(i, Mroot);
-        }
-        const gx = hAt(n.rx - 1, n.rz) - hAt(n.rx + 1, n.rz), gz = hAt(n.rx, n.rz - 1) - hAt(n.rx, n.rz + 1);
-        Q2.setFromUnitVectors(UP, V2.set(gx, 2, gz).normalize());
-        Mout.compose(V1.set(n.rx, y + 0.18, n.rz), Q2, V2.set(0.95 * vis, 1, 0.95 * vis)); blob.setMatrixAt(i, Mout);
-      }
-      for (const part of parts) part.mesh.instanceMatrix.needsUpdate = true;
-      blob.instanceMatrix.needsUpdate = true;
+      if (!colored && list.length) { colorBodies(parts, list); colored = true; }
+      for (let i = 0; i < list.length; i++) { const n = list[i]; drawBody(parts, blob, i, n.rx, n.rz, n.h, poseOf(n, t), vis, n.look); }
+      bodyDone(parts, blob);
     }
-    // 말풍선 (이름표 층 위). 냄새 반응은 늘, 잡담은 가까이 볼 때만 보여요
+
+    // ---- 방문자 캐릭터 그리기 · 세우기
+    let avs = [];   // [{ key, look(번호), L(색), nick, x, z, h, mine, yaw, seed }]
+    const avState = (key) => (crowd ? crowd.avatars.find((a) => a.key === key) : null);
+    function setAvatarsNow(list) {
+      const old = new Map(avs.map((a) => [a.key, a]));
+      avs = (list || []).filter((a) => a && a.key !== undefined && Number.isFinite(a.x) && Number.isFinite(a.z)).slice(0, AV_MAX).map((a) => ({
+        key: String(a.key), look: (a.look || []).slice(), L: lookColors(a.look), nick: String(a.nick || ''), x: a.x, z: a.z, h: Number.isFinite(a.h) ? a.h : 0,
+        mine: !!a.mine, yaw: old.has(String(a.key)) ? old.get(String(a.key)).yaw : 0, seed: (hash(String(a.key)) % 1000) / 100 }));
+      if (crowd) crowd.setAvatars(avs.map((a) => ({ key: a.key, x: a.x, z: a.z, h: a.h, nick: a.nick })));
+      for (const p of avParts) p.mesh.count = avs.length;
+      avBlob.count = avs.length;
+      colorBodies(avParts, avs.map((a) => ({ look: a.L })));
+    }
+    function avPose(a, t, dt) {
+      const p = POSE0(), st = avState(a.key), now = crowd ? crowd.time : 0;
+      if (st && st.react) NOSE(p, t);
+      else if (st && now >= st.waveFrom && now < st.waveUntil) { WAVE(p, t); p.head = 0.04; }
+      else { p.armLx = 0.05 * Math.sin(t * 1.1 + a.seed); p.head = 0.04 * Math.sin(t * 0.7 + a.seed); p.bob = 0.006 * (1 + Math.sin(t * 2 + a.seed)); }   // 숨 쉬듯 살짝
+      // 가까이 걷는 학생 쪽으로 고개를 돌려요 (몸 방향에서 ±1.1 라디안까지)
+      const want = st && st.watch !== null && !st.react ? Math.max(-1.1, Math.min(1.1, angDiff(st.watch, a.h))) : 0;
+      a.yaw += (want - a.yaw) * Math.min(1, dt * 3);
+      p.yaw = a.yaw;
+      return p;
+    }
+    function drawAvatars(vis, t, dt) {
+      for (let i = 0; i < avs.length; i++) { const a = avs[i]; drawBody(avParts, avBlob, i, a.x, a.z, a.h, avPose(a, t, dt), vis, a.L); }
+      if (avs.length) bodyDone(avParts, avBlob);
+    }
+    // 서 있을 수 있는 자리인지: 캠퍼스 네모 안 · 건물과 물 밖 · 다른 캐릭터와 1.1m 넘게. 걷는 길 가운데면 길 옆으로 비켜 세워요 (학생이 몸을 뚫고 지나가지 않게)
+    const bldRings = (campus.buildings || []).map((b) => ringPts(b.outer)).filter((r) => r.length >= 3).map((r) => ({ r, bb: bbox(r) }));
+    const waterRings = (campus.areas || []).filter((a) => a.k === 'water').map((a) => ringPts(a.outer)).filter((r) => r.length >= 3).map((r) => ({ r, bb: bbox(r) }));
+    const ringHit = (list, x, z, pad) => list.some((q) => x > q.bb[0] - pad && x < q.bb[2] + pad && z > q.bb[1] - pad && z < q.bb[3] + pad && (inside([x, z], q.r) || (pad > 0 && distToRing([x, z], q.r) < pad)));
+    function canStand(x, z, ignoreKey) {
+      if (!(Number.isFinite(x) && Number.isFinite(z))) return { ok: false, why: 'out' };
+      if (!(x > R.x0 + 4 && x < R.x1 - 4 && z > R.z0 + 4 && z < R.z1 - 4)) return { ok: false, why: 'out', x, z };
+      if (ringHit(bldRings, x, z, 0)) return { ok: false, why: 'building', x, z };
+      if (ringHit(waterRings, x, z, 0)) return { ok: false, why: 'water', x, z };
+      if (statueSpots.some((s) => Math.hypot(x - s.x, z - s.z) < s.r)) return { ok: false, why: 'statue', x, z };
+      let px = x, pz = z, nearE = null, nearD = 25;
+      for (let pass = 0; pass < 4; pass++) {
+        let moved = false;
+        for (const e of walk.edges) {
+          const A = walk.nodes[e.a], B = walk.nodes[e.b], need = e.lane + 0.7;
+          if (Math.min(A.x, B.x) - need > px || Math.max(A.x, B.x) + need < px || Math.min(A.z, B.z) - need > pz || Math.max(A.z, B.z) + need < pz) continue;
+          const si = segInfo([px, pz], [A.x, A.z], [B.x, B.z]);
+          if (si.d >= need) continue;
+          const cx = A.x + (B.x - A.x) * si.t, cz = A.z + (B.z - A.z) * si.t;
+          let ux = px - cx, uz = pz - cz, L = Math.hypot(ux, uz);
+          if (L < 1e-3) { const ex = B.x - A.x, ez = B.z - A.z, el = Math.hypot(ex, ez) || 1; ux = -ez / el; uz = ex / el; L = 1; }   // 한가운데면 길의 왼쪽으로
+          px = cx + ux / L * (need + 0.02); pz = cz + uz / L * (need + 0.02); moved = true;
+        }
+        if (!moved) break;
+        if (pass === 3) return { ok: false, why: 'path', x, z };
+      }
+      if (ringHit(bldRings, px, pz, 0.45) || ringHit(waterRings, px, pz, 0.3)) return { ok: false, why: 'path', x, z };
+      if (statueSpots.some((s) => Math.hypot(px - s.x, pz - s.z) < s.r + 0.3)) return { ok: false, why: 'statue', x, z };
+      for (const a of avs) if (a.key !== ignoreKey && Math.hypot(a.x - px, a.z - pz) < 1.1) return { ok: false, why: 'crowded', x: px, z: pz };
+      for (const e of walk.edges) {   // 가장 가까운 길을 바라보게 세워요 (지나가는 학생을 볼 수 있게)
+        const A = walk.nodes[e.a], B = walk.nodes[e.b];
+        if (Math.min(A.x, B.x) - nearD > px || Math.max(A.x, B.x) + nearD < px || Math.min(A.z, B.z) - nearD > pz || Math.max(A.z, B.z) + nearD < pz) continue;
+        const si = segInfo([px, pz], [A.x, A.z], [B.x, B.z]);
+        if (si.d < nearD) { nearD = si.d; nearE = [A.x + (B.x - A.x) * si.t, A.z + (B.z - A.z) * si.t]; }
+      }
+      const h = nearE ? Math.atan2(nearE[0] - px, nearE[1] - pz) : Math.atan2(camera.position.x - px, camera.position.z - pz);
+      return { ok: true, x: Math.round(px * 100) / 100, z: Math.round(pz * 100) / 100, h: Math.round(h * 100) / 100, moved: Math.hypot(px - x, pz - z) > 0.01 };
+    }
+    // 세울 자리 고르기: 마우스를 따라 반투명 캐릭터가 움직이고, 발밑 고리가 초록(세울 수 있음) · 빨강(안 됨)으로 보여요
+    const ghost = new T.Group(); ghost.visible = false; scene.add(ghost);
+    const ghostMats = [];
+    for (const [name, geo, role, pivot] of AV_BODY) {
+      const m = new T.Mesh(geo, new T.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false }));
+      m.userData = { name, role, pivot }; ghost.add(m); ghostMats.push(m);
+    }
+    const ghostRing = new T.Mesh(new T.RingGeometry(0.55, 0.85, 28), new T.MeshBasicMaterial({ color: 0x2f9e44, transparent: true, opacity: 0.9, depthTest: false }));
+    ghostRing.rotation.x = -Math.PI / 2; ghostRing.renderOrder = 20; ghost.add(ghostRing);
+    let placing = null;   // { look, key, cb }
+    function dressGhost(look) {
+      const L = lookColors(look), c = new T.Color();
+      for (const m of ghostMats) {
+        const { name, role, pivot } = m.userData;
+        m.material.color.copy(c.setHex(roleColor(L, role)));
+        m.visible = !((name === 'hairBack' && !L.long) || (name === 'pony' && !L.pony) || (name === 'cap' && L.hat !== 1) || (name === 'beanie' && L.hat !== 2) || (name === 'glasses' && !L.glasses) || (name === 'bag' && !L.bag));
+        m.position.set(pivot ? pivot[0] : 0, pivot ? pivot[1] : 0, pivot ? pivot[2] : 0);
+      }
+    }
+    function moveGhost(x, z, okk, h) {
+      const vis = visScale();
+      ghost.position.set(x, hMesh(x, z) + FOOT, z); ghost.rotation.y = h || 0; ghost.scale.set(vis, vis, vis);
+      ghostRing.material.color.setHex(okk ? 0x2f9e44 : 0xe03131); ghostRing.position.y = 0.06 / vis;
+      ghost.visible = true;
+    }
+    // 화면의 한 점(clientX, clientY) 아래 땅 (건물 · 나무를 지나 땅에 닿는 곳)
+    function groundUnder(cx, cy) { setRay({ clientX: cx, clientY: cy }); const hit = ray.intersectObject(ground, false)[0]; return hit ? hit.point : null; }
+    function placeTry(cx, cy, commit) {
+      const p = groundUnder(cx, cy); if (!p) return null;
+      const r = canStand(p.x, p.z, placing.key);
+      moveGhost(r.ok ? r.x : p.x, r.ok ? r.z : p.z, r.ok, r.ok ? r.h : 0);
+      if (commit) {
+        if (r.ok) { const cb = placing.cb; stopPlacing(); cb({ ok: true, x: r.x, z: r.z, h: r.h, moved: r.moved }); }
+        else if (placing.cb) placing.cb({ ok: false, why: r.why });
+      }
+      return r;
+    }
+    function stopPlacing() { placing = null; ghost.visible = false; wrap.classList.remove('m3-placing'); }
+
+    // 말풍선 (이름표 층 위). 냄새 반응은 늘, 잡담 · 혼잣말은 600m 안에서 볼 때만 보여요 (360m 넘게 멀면 두 개까지).
+    //   센서 · 건물 이름표나 다른 말풍선과 겹치면 조금 위로 올리고, 그래도 자리가 없으면 잡담은 숨겨요
     const bubbles = new Map();
     const bv = new T.Vector3();
-    // 건물 뒤에 가린 학생인지 (0.25초마다 한 번씩 봐요): 잡담 말풍선은 숨기고, 냄새 반응은 흐리게 보여요
+    // 건물 뒤에 가린 사람인지 (0.25초마다 한 번씩 봐요): 잡담 말풍선은 숨기고, 냄새 반응은 흐리게 보여요
     const occRay = new T.Raycaster(), occDir = new T.Vector3(), headP = new T.Vector3();
     const bldObjs = buildings.flatMap((b) => b.occ || [b.mesh]);
     function behindBuilding(x, y, z) {
@@ -1267,23 +1838,77 @@
       occRay.set(camera.position, occDir.divideScalar(L)); occRay.far = L - 0.8;
       return occRay.intersectObjects(bldObjs, false).length > 0;
     }
+    function bubbleFor(key) {
+      let b = bubbles.get(key);
+      if (!b) { const el = document.createElement('div'); el.className = 'm3-say'; el.setAttribute('aria-hidden', 'true'); el.style.display = 'none'; overlay.appendChild(el); b = { el, text: '', at: -1, w: 0, h: 0 }; bubbles.set(key, b); }
+      return b;
+    }
+    let labelBoxes = [];   // placeLabels 가 그린 센서 · 건물 이름표 자리
     function placeBubbles(vis) {
-      const near = camera.position.distanceTo(controls.target) < 360, now = performance.now();
-      for (const n of crowd.npcs) {
-        let b = bubbles.get(n.id);
-        const want = studentsOn && n.say && (n.say.kind === 'smell' || near);
-        if (!want) { if (b && b.el.style.display !== 'none') b.el.style.display = 'none'; continue; }
-        if (!b) { const el = document.createElement('div'); el.className = 'm3-say'; el.setAttribute('aria-hidden', 'true'); overlay.appendChild(el); b = { el, text: '' }; bubbles.set(n.id, b); }
-        if (b.text !== n.say.text) { b.text = n.say.text; b.el.textContent = n.say.text; b.el.classList.toggle('smell', n.say.kind === 'smell'); }
-        const gy = hMesh(n.rx, n.rz) + FOOT;
-        bv.set(n.rx, gy + 2.0 * vis + 0.6, n.rz).project(camera);
-        if (!(bv.z < 1 && bv.x > -1.1 && bv.x < 1.1 && bv.y > -1.1 && bv.y < 1.1)) { b.el.style.display = 'none'; continue; }
-        if (!b.chk || now - b.chk > 250) { b.chk = now; b.behind = behindBuilding(n.rx, gy + 1.55 * vis, n.rz); }
-        if (b.behind && n.say.kind !== 'smell') { b.el.style.display = 'none'; continue; }
+      const camD = camera.position.distanceTo(controls.target), near = camD < 600, now = performance.now();
+      const cap = camD < 360 ? Infinity : 2;
+      const want = [];
+      if (studentsOn && crowd) for (const n of crowd.npcs) if (n.say && (n.say.kind === 'smell' || near)) want.push({ key: 'n' + n.id, x: n.rx, z: n.rz, say: n.say });
+      if (crowd) for (const a of crowd.avatars) if (a.say && (a.say.kind === 'smell' || near)) want.push({ key: 'a' + a.key, x: a.x, z: a.z, say: a.say });
+      for (const w of want) { w.gy = hMesh(w.x, w.z) + FOOT; bv.set(w.x, w.gy + 2.0 * vis + 0.6, w.z); w.d = bv.distanceTo(camera.position); w.p = bv.project(camera).clone(); }
+      want.sort((a, b) => (a.say.kind === 'smell' ? 0 : 1) - (b.say.kind === 'smell' ? 0 : 1) || a.d - b.d);   // 냄새 반응 먼저, 그다음 가까운 사람부터
+      const taken = labelBoxes.slice(), keep = new Set();
+      let talk = 0;
+      for (const w of want) {
+        const pr = w.p, smell = w.say.kind === 'smell';
+        if (!(pr.z < 1 && pr.x > -1.1 && pr.x < 1.1 && pr.y > -1.1 && pr.y < 1.1)) continue;
+        if (!smell && talk >= cap) continue;
+        const b = bubbleFor(w.key);
+        if (!b.chk || now - b.chk > 250 || b.at !== w.say.at) { b.chk = now; b.behind = behindBuilding(w.x, w.gy + 1.55 * vis, w.z); }
+        if (b.behind && !smell) continue;
+        if (b.text !== w.say.text || b.at !== w.say.at) {   // 새 말: 글자를 바꾸고 톡 튀어나오게
+          b.text = w.say.text; b.at = w.say.at; b.el.textContent = w.say.text;
+          b.el.className = 'm3-say' + (smell ? ' smell' : w.say.kind === 'think' ? ' think' : '');
+          b.el.style.display = ''; b.w = b.el.offsetWidth; b.h = b.el.offsetHeight;
+          b.el.classList.add('pop');
+        }
+        const x = (pr.x + 1) / 2 * VW, y = (1 - pr.y) / 2 * VH;
+        let lift = 0;
+        for (let k = 0; k < 4; k++) {
+          const bx = [x - b.w / 2 - 2, y - lift - b.h - 8, x + b.w / 2 + 2, y - lift];
+          const hit = taken.find((q) => !(bx[2] < q[0] || bx[0] > q[2] || bx[3] < q[1] || bx[1] > q[3]));
+          if (!hit) break;
+          lift = y - hit[1] + 2;
+          if (lift > 46) break;
+        }
+        if (lift > 46 && !smell) continue;
+        taken.push([x - b.w / 2 - 2, y - lift - b.h - 8, x + b.w / 2 + 2, y - lift]);
+        keep.add(w.key); if (!smell) talk++;
         b.el.classList.toggle('behind', !!b.behind);
+        b.el.classList.toggle('lift', lift > 6);
         b.el.style.display = '';
-        b.el.style.transform = `translate(${((bv.x + 1) / 2 * VW).toFixed(1)}px, ${((1 - bv.y) / 2 * VH).toFixed(1)}px) translate(-50%, -100%)`;
+        b.el.style.transform = `translate(${x.toFixed(1)}px, ${(y - lift).toFixed(1)}px) translate(-50%, -100%)`;
       }
+      for (const [k, b] of bubbles) if (!keep.has(k) && b.el.style.display !== 'none') b.el.style.display = 'none';
+    }
+    // 방문자 캐릭터 이름표: 320m 안에서 볼 때, 내 캐릭터(나)는 늘, 다른 사람 캐릭터는 가까운 20개까지
+    const avLabels = new Map();
+    function placeAvatarLabels(vis) {
+      const camD = camera.position.distanceTo(controls.target), keep = new Set();
+      if (camD < 320 && avs.length) {
+        const cand = avs.map((a) => { bv.set(a.x, hMesh(a.x, a.z) + FOOT + 1.95 * vis + 0.15, a.z); return { a, d: bv.distanceTo(camera.position), p: bv.project(camera).clone() }; })
+          .filter((q) => q.p.z < 1 && q.p.x > -1.05 && q.p.x < 1.05 && q.p.y > -1.05 && q.p.y < 1.05)
+          .sort((p, q) => (q.a.mine ? 1 : 0) - (p.a.mine ? 1 : 0) || p.d - q.d);
+        let others = 0;
+        for (const q of cand) {
+          if (!q.a.mine && ++others > 20) continue;
+          let el = avLabels.get(q.a.key);
+          if (!el) { el = document.createElement('div'); el.className = 'm3-av'; el.setAttribute('aria-hidden', 'true'); overlay.appendChild(el); avLabels.set(q.a.key, el); }
+          const html = (q.a.mine ? '<b>나</b>' : '') + esc(q.a.nick || '방문자');
+          if (el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; el.classList.toggle('mine', q.a.mine); el._w = el.offsetWidth; el._h = el.offsetHeight; }
+          const x = (q.p.x + 1) / 2 * VW, y = (1 - q.p.y) / 2 * VH;
+          el.style.display = '';
+          el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
+          labelBoxes.push([x - (el._w || 60) / 2 - 2, y - (el._h || 18) - 2, x + (el._w || 60) / 2 + 2, y + 2]);
+          keep.add(q.a.key);
+        }
+      }
+      for (const [k, el] of avLabels) if (!keep.has(k)) { if (el.style.display !== 'none') el.style.display = 'none'; if (!avs.some((a) => a.key === k)) { el.remove(); avLabels.delete(k); } }
     }
 
     let editing = false, selected = null, pal = PALETTE.day;
@@ -1311,6 +1936,25 @@
       viewTop() { userMoved = true; setView(Math.PI / 2, 0.0001, span * 1.18, homeT[0], homeT[1]); },
       // (x, z) 땅 위를 dist m 떨어져서 봐요. theta = 돌린 각, phi = 기운 각 (0 = 바로 위). 사진 찍기 · 시험용
       viewAt(x, z, dist, theta, phi) { userMoved = true; setView(theta ?? HOME.theta, Math.max(0.0001, Math.min(controls.maxPolarAngle, phi ?? HOME.phi)), Math.max(controls.minDistance, Math.min(controls.maxDistance, dist ?? 200)), x, z); },
+      // (x, z) 에 선 사람을 건물 · 나무가 가리지 않는 쪽에서 봐요. theta0(사람이 바라보는 쪽, 얼굴이 보여요)부터 30° 씩 돌려 가며 찾아요
+      viewClear(x, z, dist, phi, theta0) {
+        const block = bldObjs.concat([crowns]);
+        phi = Math.max(0.2, Math.min(controls.maxPolarAngle, phi ?? 0.95));
+        const d = Math.max(controls.minDistance, Math.min(controls.maxDistance, dist ?? 30));
+        const th0 = Number.isFinite(theta0) ? theta0 : HOME.theta;
+        const tgt = new T.Vector3(x, hMesh(x, z) + 1.2, z), cam = new T.Vector3(), dir = new T.Vector3(), rc = new T.Raycaster();
+        for (const k of [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6]) {
+          const th = th0 + k * Math.PI / 6;
+          for (const ph of [phi, Math.max(0.3, phi - 0.35)]) {   // 옆에서 막히면 조금 더 위에서
+            cam.set(x + d * Math.sin(ph) * Math.sin(th), hAt(x, z) + d * Math.cos(ph), z + d * Math.sin(ph) * Math.cos(th));
+            const L = dir.subVectors(tgt, cam).length();
+            rc.set(cam, dir.divideScalar(L)); rc.far = L - 0.6;
+            if (!rc.intersectObjects(block, false).length) { api.viewAt(x, z, d, th, ph); return { theta: th, phi: ph, dist: d }; }
+          }
+        }
+        api.viewAt(x, z, d, th0, 0.25);   // 사방이 막혔으면 거의 위에서 봐요
+        return null;
+      },
       focus(id) {
         const s = sensors.get(id); if (!s) return;
         userMoved = true; stopCoasting();
@@ -1333,8 +1977,9 @@
                       flats: FLATS.map((f) => ({ kind: f.kind, name: f.name, level: +f.level.toFixed(2) })) }),
       // 학생 캐릭터 켜고 끄기 · 상태
       setStudents(on) {
-        studentsOn = !!on && !!crowd; stuGroup.visible = studentsOn;
-        if (!studentsOn) for (const b of bubbles.values()) b.el.style.display = 'none';
+        studentsOn = !!on && !!crowd && STU_N > 0; stuGroup.visible = studentsOn;
+        if (crowd) crowd.setNpcsOn(studentsOn);
+        if (!studentsOn) for (const [k, b] of bubbles) if (k[0] === 'n') b.el.style.display = 'none';
       },
       studentsOn: () => studentsOn,
       students: () => ({
@@ -1342,7 +1987,28 @@
         zones: crowd ? crowd.zones.map((q) => q.id) : [], time: crowd ? +crowd.time.toFixed(1) : 0,
         list: crowd ? crowd.npcs.map((n) => ({ x: +n.rx.toFixed(2), z: +n.rz.toFixed(2), mode: n.mode, fast: n.fast, say: n.say ? n.say.text : null, reacts: n.reacts })) : [],
         bubbles: [...bubbles.values()].filter((b) => b.el.style.display !== 'none').map((b) => b.el.textContent),
+        says: crowd ? crowd.npcs.filter((n) => n.say).map((n) => ({ id: n.id, text: n.say.text, kind: n.say.kind })) : [],
+        bubbleEls: [...bubbles].filter(([, b]) => b.el.style.display !== 'none').map(([k, b]) => ({ key: k, text: b.el.textContent, cls: b.el.className })),
       }),
+      // 방문자 캐릭터: list = [{ key, look: [번호 9개], nick: '졸린 코끼리', x, z, h, mine }]
+      setAvatars(list) { setAvatarsNow(list); },
+      avatars: () => avs.map((a) => {
+        const st = avState(a.key), lab = avLabels.get(a.key);
+        return { key: a.key, x: a.x, z: a.z, h: a.h, mine: a.mine, nick: a.nick, look: a.look.slice(), say: st && st.say ? st.say.text : null, react: !!(st && st.react),
+                 waving: !!(st && crowd && crowd.time >= st.waveFrom && crowd.time < st.waveUntil), greeted: st ? st.greeted : 0, label: !!(lab && lab.style.display !== 'none') };
+      }),
+      canStand: (x, z, ignoreKey) => canStand(x, z, ignoreKey),
+      // 세울 자리 고르기: 땅을 누르면 cb({ ok, x, z, h }) 또는 cb({ ok: false, why }) (why: out · building · water · path · crowded · cancel)
+      startPlacing(look, key, cb) { placing = { look: (look || []).slice(), key: key ?? null, cb }; dressGhost(look); wrap.classList.add('m3-placing'); hover = null; },
+      cancelPlacing() { if (placing) { const cb = placing.cb; stopPlacing(); if (cb) cb({ ok: false, why: 'cancel' }); } },
+      isPlacing: () => !!placing,
+      // 땅 위 (x, z) 가 페이지에서 어디에 보이는지 (화면 밖이면 null)
+      screenOf(x, z, lift) {
+        bv.set(x, hMesh(x, z) + (lift || 0), z).project(camera);
+        if (!(bv.z < 1 && Math.abs(bv.x) <= 1 && Math.abs(bv.y) <= 1)) return null;
+        const r = renderer.domElement.getBoundingClientRect();
+        return { x: r.left + (bv.x + 1) / 2 * r.width, y: r.top + (1 - bv.y) / 2 * r.height };
+      },
       walkGraph: () => walk,
       // 시험용 손잡이
       _test: {
@@ -1350,6 +2016,13 @@
         near(i, id, maxD) { const s = sensors.get(id); if (!crowd || !s) return false; const k = crowd.nearestNode(s.site.x, s.site.z, maxD ?? 20); return k >= 0 && crowd.place(i, k, 30); },
         // 화면 그리기를 기다리지 않고 sec 초만큼 움직여요
         run(sec) { if (!crowd) return; crowd.setZones(smokeZones()); for (let k = 0; k < Math.round(sec / 0.1); k++) crowd.step(0.1, visScale()); },
+        // 떠 있는 말풍선을 모두 지워요
+        quiet() { if (crowd) crowd.quiet(); },
+        crowd: () => crowd,
+        landmarks: () => Object.assign({}, landmarks, { gardens: landmarks.gardens.map((g) => { const b = buildings.find((q) => q.id === g.id); return Object.assign({}, g, { visible: !!(b && b.garden && b.garden[0].visible), tint: (b && b.tint) || null }); }) }),
+        skinOf: (id) => { const b = buildings.find((q) => q.id === id); return b ? { skin: b.skin || null, stone: !!b.wall.map && (b.wall.map === stDay || b.wall.map === stLit), wall: b.wall.color.getHex(), tint: b.tint || null } : null; },
+        roofBoxes: () => roofBoxes.map((q) => [q[0], q[2]]),
+        statueSpots: () => statueSpots.map((s) => Object.assign({}, s)),
       },
       renderer, camera, controls, scene,
       dispose() { cancelAnimationFrame(raf); ro.disconnect(); renderer.dispose(); wrap.remove(); },
@@ -1367,7 +2040,7 @@
       }
       for (const b of buildings) {
         const st = want.get(b) || null;
-        const wallC = new T.Color(b.trad ? pal.tradWall : b.bg ? pal.wallBg : pal.wall), roofC = new T.Color(b.trad ? pal.tradRoof : b.bg ? pal.roofBg : (b.alt ? pal.roofAlt : pal.roof));
+        const wallC = new T.Color(b.trad ? pal.tradWall : b.bg ? pal.wallBg : b.skin === 'stone' ? pal.stoneWall : pal.wall), roofC = new T.Color(b.trad ? pal.tradRoof : b.bg ? pal.roofBg : (b.alt ? pal.roofAlt : pal.roof));
         if (st) {
           const col = colorFor(st);
           b.wall.color.copy(wallC.lerp(col, 0.6)); b.roof.color.copy(roofC.lerp(col, 0.85));
@@ -1376,6 +2049,7 @@
           b.wall.color.copy(wallC); b.roof.color.copy(roofC); b.roof.emissive.set(0); b.wall.emissive.set(0);
         }
         b.tint = st;
+        if (b.garden) for (const m of b.garden) m.visible = !st;   // 경고 색이면 옥상 정원을 감춰 지붕 색이 보이게
       }
     }
     function applyPalette(p) {
@@ -1388,7 +2062,9 @@
       roadLayer.colorize(p);
       if (texDay) texDay.dispose(); if (texLit) texLit.dispose();
       texDay = windowTexture(p, false); texLit = p.litTop ? windowTexture(p, true) : null;
-      for (const b of buildings) { if (b.trad) continue; b.wall.map = (texLit && b.lit && !b.bg) ? texLit : texDay; b.wall.needsUpdate = true; }
+      if (stDay) stDay.dispose(); if (stLit) stLit.dispose();
+      stDay = stoneTexture(p, false); stLit = p.litTop ? stoneTexture(p, true) : null;
+      for (const b of buildings) { if (b.trad) continue; b.wall.map = b.skin === 'stone' ? ((stLit && b.lit) ? stLit : stDay) : (texLit && b.lit && !b.bg) ? texLit : texDay; b.wall.needsUpdate = true; }
       for (const m of tradMats) m.mat.color.set(p === PALETTE.night ? m.night : m.day);
       edgeMat.color.set(p.edge); edgeMat.opacity = p.edgeOp;
       boxMat.color.set(p.box);
@@ -1430,6 +2106,7 @@
         L.el.style.display = show ? '' : 'none';
         L.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
       }
+      labelBoxes = taken;
     }
     function remeasure() { for (const L of labels) { L.w = 0; L.h = 0; } }
 
@@ -1509,18 +2186,27 @@
           s.head.position.y = s.baseY + 15 + 2.2 + Math.sin(t * 4) * 0.7;
         } else if (s.ring.material.opacity) { s.ring.material.opacity = 0; s.ring.scale.set(1, 1, 1); }
       }
-      let vis = 1;
-      if (crowd && studentsOn) { vis = visScale(); crowd.setZones(smokeZones()); crowd.step(dt, vis); drawStudents(vis, t); }
+      const vis = visScale();
+      if (crowd && (studentsOn || avs.length)) {
+        crowd.setZones(smokeZones());
+        // 보이는 곳: 카메라가 보는 땅 둘레. 잡담 말풍선은 이 안에서 4개(휴대폰 2개)까지 띄워요
+        crowd.setFocus(controls.target.x, controls.target.z, Math.max(40, Math.min(700, camera.position.distanceTo(controls.target) * 0.75)));
+        crowd.step(dt, vis);
+        if (studentsOn && STU_N) drawStudents(vis, t);
+      }
+      if (avs.length) drawAvatars(vis, t, dt);
+      if (placing && hover) { placeTry(hover.x, hover.y, false); hover = null; }
       if (now - shadowAt > 100) { renderer.shadowMap.needsUpdate = true; shadowAt = now; }
       renderer.render(scene, camera);
       placeLabels();
-      if (crowd) placeBubbles(vis);
+      placeAvatarLabels(vis);
+      placeBubbles(vis);
     }
     raf = requestAnimationFrame(frame);
 
     // ---- 누르기 · 끌어 옮기기 (끌기는 '핀 위치 옮기기'를 켰을 때만)
     const ray = new T.Raycaster(), ndc = new T.Vector2();
-    let down = null, dragging = null;
+    let down = null, dragging = null, hover = null;
     function setRay(e) {
       const r = renderer.domElement.getBoundingClientRect();
       ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
@@ -1535,6 +2221,7 @@
       if (id) { dragging = id; controls.enabled = false; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) { /* 일부 브라우저 */ } }
     });
     renderer.domElement.addEventListener('pointermove', (e) => {
+      if (placing && e.pointerType !== 'touch') hover = { x: e.clientX, y: e.clientY };   // 다음 장면에서 반투명 캐릭터를 옮겨요
       if (!dragging) return;
       setRay(e);
       const hit = ray.intersectObject(ground, false)[0];
@@ -1555,6 +2242,10 @@
     renderer.domElement.addEventListener('pointerup', (e) => {
       wrap.classList.remove('m3-grabbing');
       if (endDrag()) return;
+      if (placing) {   // 캐릭터 세우기: 끌지 않고 누른 곳에 세워요 (끌면 지도가 움직여요)
+        if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6) placeTry(e.clientX, e.clientY, true);
+        down = null; return;
+      }
       if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6 && !editing) {
         const id = sensorHit(e);
         if (id && api.onSelect) api.onSelect(id);
@@ -1562,8 +2253,9 @@
       down = null;
     });
     renderer.domElement.addEventListener('pointercancel', () => { wrap.classList.remove('m3-grabbing'); endDrag(); });
+    renderer.domElement.addEventListener('pointerleave', () => { if (placing) ghost.visible = false; });
     return api;
   }
 
-  root.AirfaroMap3D = { create, PALETTE, buildWalkGraph, makeCrowd };
+  root.AirfaroMap3D = { create, PALETTE, buildWalkGraph, makeCrowd, placeKind, shortName, timeKind, AVATAR, lookOk, nickOk, nickName, lookColors, CHAT: { TALK, THINK, ARRIVE, PASS, CALL, GREET, SMELL_TEXT } };
 })(typeof window !== 'undefined' ? window : globalThis);
