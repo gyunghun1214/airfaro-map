@@ -215,7 +215,7 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
       <span class="small" id="editMsg" role="status"></span>
     </div>
     <div class="editbar" id="jsonbox" hidden><textarea id="jsonText" readonly aria-label="sites.json에 붙여 넣을 위치"></textarea></div>
-    <div class="mapfoot"><span id="attrib">건물·길 © OpenStreetMap 기여자 (ODbL) · 고도 AWS Terrain Tiles (SRTM 기반)</span><span>건물 모양은 지도 자료로 만든 모형이라 실제 사진과 달라요</span><span id="npcNote">걷는 학생은 꾸밈용 가상 캐릭터이고, 실제 사람의 위치가 아니에요</span></div>
+    <div class="mapfoot"><span id="attrib">건물·길 © OpenStreetMap 기여자 (ODbL) · 고도 AWS Terrain Tiles (SRTM 기반)</span><span>건물과 조각상은 지도 자료와 사진을 보고 만든 모형이라 실제와 조금 달라요</span><span id="npcNote">걷는 학생은 꾸밈용 가상 캐릭터이고, 실제 사람의 위치가 아니에요</span></div>
   </div>
 
   <div class="side">
@@ -245,7 +245,7 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
       <li>30초 넘게 값이 안 오면 회색 '수신 없음'으로 바꿔요. 값이 없을 때 초록으로 두지 않아요.</li>
       <li>장치를 켜거나 다시 연결하면 4분 동안 '기준 측정 전'이에요. 3분은 가스 센서 예열, 1분은 평소 공기를 재는 시간이에요.</li>
       <li>대운동장은 실제처럼 평평한 축구장으로, 정각원과 종각은 기와지붕 전통 건물로 그린 모형이에요. 둘레 땅 높이는 모형에 맞춰 고른 값이라 실제와 조금 달라요.</li>
-      <li>명진관은 돌벽과 가운데 탑, 아치 문을 넣어 그렸고, 팔정도에는 청동 불상과 코끼리상을, 중앙도서관 · 원흥관 · 상록원 지붕에는 옥상 정원을 올렸어요. 기사와 OpenStreetMap 자료를 보고 만든 모형이라 크기와 색은 실제와 달라요. 다른 건물은 지도에 있는 윤곽과 높이로만 만들었어요.</li>
+      <li>팔정도는 실제처럼 평평한 광장으로 그렸어요. 가운데 청동 불상과 화강암 틀, 어른 코끼리 둘과 새끼 하나로 된 석상은 사진을 보고 만들었어요. 명진관 돌벽과 탑, 신공학관 · 중앙도서관 · 정보문화관 · 다향관의 벽과 지붕 색도 사진을 보고 골랐고, 중앙도서관 · 원흥관 · 상록원 지붕에는 옥상 정원을 올렸어요. 그래도 모형이라 크기와 색, 창문 수는 실제와 달라요. 다른 건물은 지도에 있는 윤곽과 높이로 만들고 창문은 어림으로 넣었어요.</li>
       <li>지도 위를 걷는 학생은 화면을 꾸미는 가상 캐릭터라서 실제 사람의 위치도, 냄새를 잰 값도 아니에요. 흡연 의심 센서 둘레에 들어가면 "아 담배 냄새!" 하며 코를 막고 피해 가요. 판단 보류나 공기 변화에는 반응하지 않고, 지도 위 '학생 캐릭터' 단추로 끌 수 있어요. 학생들이 주고받는 말은 미리 써 둔 문장에서 골라 보여 줘요.</li>
       <li>'내 캐릭터'로 만든 방문자 캐릭터도 꾸밈용이에요. 공개 지도에서는 모든 방문자에게 보이고, 노트북 화면과 미리 보기에서는 그 브라우저에만 보여요. 이름은 정해 둔 낱말 두 개를 골라 붙이는 방식이라 글을 직접 쓸 수는 없어요.</li>
     </ul>
@@ -479,6 +479,8 @@ function studentsWanted() { const v = store('airfaro.students'); return v === '1
 function showStudents() { const b = $('btnStudents'), on = !!map && map.studentsOn(); b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); $('npcNote').hidden = !on; }
 // 그림 품질: 주소 끝에 ?quality=high 또는 ?quality=low 를 붙이면 그대로, 없으면 기기에 맞춰 골라요
 const QUALITY = (() => { try { const q = new URLSearchParams(location.search).get('quality'); return q === 'high' || q === 'low' ? q : null; } catch (e) { return null; } })();
+// 셰이더 오류 검사: 주소 끝에 ?glcheck=1 을 붙이면 켜요 (시험용. 보통은 꺼서 지도가 빨리 떠요)
+const GLCHECK = (() => { try { return new URLSearchParams(location.search).get('glcheck') === '1'; } catch (e) { return false; } })();
 const isNight = () => { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
 function startMap() {
   const box = $('view3d');
@@ -486,7 +488,7 @@ function startMap() {
     if (!window.THREE || !window.THREE.OrbitControls) throw new Error('3D 지도를 그리는 three.js를 불러오지 못했어요. 인터넷 연결을 확인해 주세요');
     if (!window.CAMPUS) throw new Error('캠퍼스 자료 campus-data.js를 불러오지 못했어요');
     map = window.AirfaroMap3D.create(box, window.CAMPUS, { stateColors: HEX, stateNames: Object.fromEntries(Object.entries(STATES).map(([k, v]) => [k, v[0]])),
-                                                        night: isNight(), homeTarget: [-35, -5], homeDist: 520, quality: QUALITY, students: studentsWanted() });
+                                                        night: isNight(), homeTarget: [-35, -5], homeDist: 520, quality: QUALITY, glCheck: GLCHECK, students: studentsWanted() });
   } catch (e) {
     $('btnStudents').hidden = true; $('npcNote').hidden = true;
     box.innerHTML = `<div class="nogl"><div><b>3D 지도를 그리지 못했어요.</b><br>${esc(e.message)}<br>아래 목록과 기록은 그대로 볼 수 있어요.</div></div>`;
