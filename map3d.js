@@ -198,6 +198,63 @@
   const lookOk = (L) => Array.isArray(L) && L.length === 9 && L.every((v, i) => Number.isInteger(v) && v >= 0 && v < AVATAR.LIMITS[i]);
   const nickOk = (k) => Array.isArray(k) && k.length === 2 && Number.isInteger(k[0]) && Number.isInteger(k[1]) && k[0] >= 0 && k[0] < AVATAR.adj.length && k[1] >= 0 && k[1] < AVATAR.noun.length;
   const nickName = (k) => (nickOk(k) ? AVATAR.adj[k[0]] + ' ' + AVATAR.noun[k[1]] : '');
+  // ---- 자유 이름 (방문자가 직접 짓는 이름). 공개 서버 handler.mjs 의 NAME_RULES · nameCheck 와 글자 하나까지 같아야 해요 (dev/avatar_check.mjs 가 비교해요)
+  //   12자까지 · 한글 · 영어 · 숫자 · 띄어쓰기와 _ - ~ ! ? ^ ♡ ♥ ★ ☆ 만 · 숫자는 4개까지 (전화번호 · 학번을 못 쓰게) · 'ㅗ' 는 못 써요
+  //   나쁜 말 · 흡연 · 센서처럼 지도 내용과 헷갈리는 말 · 관리자인 척하는 말은 받지 않아요. 띄어 쓰거나 숫자 · 기호를 섞어도 찾아요
+  const NAME_RULES = {
+    MAX: 12, DIGITS: 4,
+    CHARS: /^[\uAC00-\uD7A3\u3131-\u314E\u314F-\u3156\u3158-\u3163A-Za-z0-9 _~!?^\u2661\u2665\u2605\u2606-]+$/,
+    LETTER: /[\uAC00-\uD7A3\u3131-\u3163A-Za-z0-9]/,
+    // 한글 낱말: 한글 · 자모만 남긴 글자에서 찾아요 (띄어쓰기 · 숫자 · 기호는 빼요)
+    KO: ['씨발', '시발', '씨빨', '시빨', '씨바', '씨팔', '시팔', '씨벌', '시벌', '쓰발', '쓰벌', '슈발', '썅', '쌍년', '씹', '좆', '좃', '존나', '졸라', '존내',
+         '병신', '븅신', '빙신', '병쉰', '등신', '새끼', '섀끼', '새기', '색기', '개새', '개색', '개쌔', '지랄', '미친', '미췬', '닥쳐', '꺼져', '엠창',
+         '애미', '애비', '느금', '니미', '니엄', '느그엄', '호로', '후레', '걸레', '창녀', '창년', '보지', '자지', '젖꼭', '꼬추', '섹스', '섹시', '야동',
+         '딸딸', '자위', '강간', '성폭', '몰카', '변태', '매춘', '원조교', '일베', '메갈', '한남', '김치녀', '된장녀', '틀딱', '급식충', '맘충', '짱깨',
+         '쪽바리', '장애', '찐따', '또라이', '돌아이', '멍청', '저능', '정신병', '정병', '자살', '죽어', '죽여', '뒤져', '뒤진', '살인', '살해', '테러',
+         '폭탄', '마약', '대마', '필로폰',
+         '담배', '흡연', '꽁초', '연초', '궐련', '니코틴', '전자담', '베이프', '액상', '냄새', '연기', '센서', '경보', '단속', '적발', '신고', '과태료',
+         '벌금', '관리자', '운영자', '에어파로',
+         'ㅅㅂ', 'ㅆㅂ', 'ㅅㅍ', 'ㅆㅍ', 'ㅂㅅ', 'ㅄ', 'ㅈㄹ', 'ㅈㄴ', 'ㅁㅊ', 'ㄲㅈ', 'ㄷㅊ', 'ㅅㄲ', 'ㅆㄹㄱ', 'ㅅㅅ', 'ㅂㅈ', 'ㅈㅈ', 'ㄴㄱㅁ'],
+    // 영어 낱말: 소문자로 바꾸고 숫자는 닮은 글자로(0→o 1→i 3→e 4→a 5→s 7→t …) 바꾼 뒤 영어만 남긴 글자에서 찾아요
+    EN: ['fuck', 'fuk', 'fck', 'shit', 'bitch', 'btch', 'cunt', 'dick', 'pussy', 'penis', 'vagina', 'porn', 'nigg', 'faggot', 'retard', 'slut', 'whore',
+         'asshole', 'bastard', 'nazi', 'hitler', 'suicide', 'sibal', 'ssibal', 'shibal', 'byungsin', 'smok', 'cigar', 'nicotin', 'vape', 'admin', 'airfaro'],
+    // 영어 낱말 하나와 똑같을 때만 (grape · skill 같은 말은 괜찮아요)
+    EN_WORD: ['rape', 'sex', 'kill', 'cum', 'ass', 'anal', 'nude', 'tits', 'boob', 'boobs'],
+    MSG: {
+      long: '이름은 12자까지 쓸 수 있어요.',
+      char: '이름에는 한글 · 영어 · 숫자 · 띄어쓰기와 _ - ~ ! ? ^ ♡ ♥ ★ ☆ 만 쓸 수 있어요.',
+      empty: '글자나 숫자를 하나는 넣어 주세요.',
+      digits: '숫자는 4개까지 쓸 수 있어요. 전화번호 같은 개인 정보는 쓰지 말아 주세요.',
+      bad: '쓸 수 없는 낱말이 들어 있어요. 다른 이름으로 지어 주세요.',
+      type: '이름 값이 맞지 않아요.',
+    },
+  };
+  const nameClean = (s) => String(s == null ? '' : s).normalize('NFC').replace(/\s+/g, ' ').trim();
+  // 이름 검사: 맞으면 { ok: true, name } (빈 이름 '' = 낱말 이름을 써요), 틀리면 { ok: false, why }
+  function nameCheck(raw) {
+    const R = NAME_RULES;
+    if (typeof raw !== 'string') return { ok: false, why: 'type' };
+    const s = nameClean(raw);
+    if (!s) return { ok: true, name: '' };
+    if (Array.from(s).length > R.MAX) return { ok: false, why: 'long' };
+    if (!R.CHARS.test(s)) return { ok: false, why: 'char' };
+    if (!R.LETTER.test(s)) return { ok: false, why: 'empty' };
+    if ((s.match(/[0-9]/g) || []).length > R.DIGITS) return { ok: false, why: 'digits' };
+    const ko = s.replace(/[^\uAC00-\uD7A3\u3131-\u3163]/g, '');
+    const lat = s.toLowerCase().replace(/[0-9]/g, (d) => 'oizeasgtbg'[+d]);
+    const en = lat.replace(/[^a-z]/g, ''), words = lat.split(/[^a-z]+/).filter(Boolean);
+    if (R.KO.some((w) => ko.includes(w)) || R.EN.some((w) => en.includes(w)) || words.some((w) => R.EN_WORD.includes(w))) return { ok: false, why: 'bad' };
+    return { ok: true, name: s };
+  }
+  // 보여 줄 이름: 지은 이름이 있으면 그것, 없으면 낱말 이름
+  const avatarName = (a) => (a && typeof a.name === 'string' && a.name ? a.name : nickName(a && a.nick)) || '방문자';
+  // 혼자 돌아다니기: 씨앗 값(seed) 하나에서 걸음 빠르기 · 돌아다니는 반지름 · 쉬는 시간 · 들르는 곳 수를 정해요 (모든 방문자의 화면에서 같아요)
+  const WANDER = { SEED_MAX: 2147483646 };
+  function wanderParams(seed) {
+    const r = rng(hash('wander|' + ((seed >>> 0) % 2147483647)));
+    const speed = Math.round((0.7 + 0.7 * r()) * 20) / 20, radius = Math.round(12 + 28 * r()), pause = Math.round((1.5 + 4.5 * r()) * 2) / 2, stops = 3 + Math.floor(r() * 4);
+    return { speed, radius, pause, stops };
+  }
   // 번호 → 그릴 색
   function lookColors(L) {
     if (!lookOk(L)) L = [1, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -489,8 +546,8 @@
           if (Math.abs(n.rx - av.x) > nd || Math.abs(n.rz - av.z) > nd) continue;
           const d = dist(n.rx, n.rz, av.x, av.z); if (d < nd) { nd = d; near = n; }
         }
-        av.watch = near ? Math.atan2(near.rx - av.x, near.rz - av.z) : null;
-        if (!near || nd > 3.2 || av.greetCool > time || av.react || near.mode !== 'walk' || near.greetCool > time || (near.say && time <= near.say.until)) continue;
+        av.watch = near && !av.moving ? Math.atan2(near.rx - av.x, near.rz - av.z) : null;
+        if (!near || av.moving || nd > 3.2 || av.greetCool > time || av.react || near.mode !== 'walk' || near.greetCool > time || (near.say && time <= near.say.until)) continue;
         near.greetCool = time + 50; av.greetCool = time + 9;
         if (trand() >= 0.55) continue;
         const pool = av.nick ? GREET.npc : GREET.npc.filter((s) => !s.includes('{nick}'));
@@ -501,12 +558,13 @@
         }
       }
     }
-    // 방문자가 세운 캐릭터 (꾸밈용): 걷지 않고 서서 지나가는 학생들을 봐요. key 가 같으면 하던 동작을 이어 가요
+    // 방문자가 세운 캐릭터 (꾸밈용): 서서 지나가는 학생들을 봐요. key 가 같으면 하던 동작을 이어 가요.
+    //   걷는 캐릭터(혼자 돌아다니기 · 조종하기)는 지도가 x · z · moving 을 그때그때 바꿔 줘요. 걷는 동안에는 인사를 주고받지 않아요
     function setAvatars(list) {
       const old = new Map(avs.map((a) => [a.key, a]));
       avs = (list || []).filter((a) => a && a.key !== undefined && Number.isFinite(a.x) && Number.isFinite(a.z)).map((a) => Object.assign(old.get(a.key) ||
         { say: null, pend: null, waveFrom: 0, waveUntil: 0, greetCool: 0, mem: new Set(), react: false, watch: null, greeted: 0, face: 0 },
-        { key: a.key, x: a.x, z: a.z, h: Number.isFinite(a.h) ? a.h : 0, nick: a.nick || '' }));
+        { key: a.key, x: a.x, z: a.z, h: Number.isFinite(a.h) ? a.h : 0, nick: a.nick || '', moving: !!a.moving }));
     }
     // dt 초만큼 움직여요. vis = 화면에서 키운 배율 (멀리서 보면 학생을 크게 그려요 → 걸음도 그만큼 크게 · 조금 빠르게)
     function step(dt, vis) {
@@ -780,7 +838,7 @@
     // 끌어 옮기면(손을 뗀 뒤 미끄러지는 동안도) 기준점이 언덕을 따라 오르내려요. 땅과의 높이 차는 그대로 둬요
     //   (지붕 위 센서로 간 뒤에 옮겨도 화면이 튀지 않아요). 돌리기 · 확대는 기준점이 그대로라 높이도 그대로예요.
     //   느린 기기에서 오래 미끄러져도 같아요 (시간이 아니라 옮긴 거리로 계산해요)
-    controls.addEventListener('start', () => { userMoved = true; });
+    controls.addEventListener('start', () => { userMoved = true; if (follow && !(drv && drv.key === follow.key)) follow = null; });
     // 화면 밖으로 너무 멀리 끌고 가지 않게
     controls.addEventListener('change', () => {
       const t = controls.target, cx = Math.max(R.x0, Math.min(R.x1, t.x)), cz = Math.max(R.z0, Math.min(R.z1, t.z));
@@ -2705,24 +2763,82 @@
       bodyDone(parts, blob);
     }
 
-    // ---- 방문자 캐릭터 그리기 · 세우기
-    let avs = [];   // [{ key, look(번호), L(색), nick, x, z, h, mine, yaw, seed }]
-    const avState = (key) => (crowd ? crowd.avatars.find((a) => a.key === key) : null);
+    // ---- 방문자 캐릭터 그리기 · 세우기 · 혼자 돌아다니기 · 조종하기
+    //   mode 0 = 내가 조종해요 (평소에는 세운 자리에 서 있어요), 1 = 혼자 돌아다녀요
+    //   (씨앗 값으로 정한 길을 서버 시계에 맞춰 걸어서, 모든 방문자의 화면에서 같은 때 같은 자리에 있어요)
+    let avs = [];   // [{ key, look(번호), L(색), nick(보여 줄 이름), mode, seed, home: {x, z, h}, x, z, h, mine, yaw, wob, moving, phase, plan, trip }]
+    let avSt = new Map();   // key → 학생 움직임(crowd) 쪽 캐릭터 (말풍선 · 인사 · 냄새 반응)
+    let clockOff = 0;   // 서버 시계 - 이 컴퓨터 시계 (밀리초)
+    const avNow = () => (Date.now() + clockOff) / 1000;
+    const avState = (key) => avSt.get(key) || null;
+    const cm = (v) => Math.round(v * 100) / 100;
+    const normAng = (h) => Math.atan2(Math.sin(h), Math.cos(h));
     function setAvatarsNow(list) {
       const old = new Map(avs.map((a) => [a.key, a]));
-      avs = (list || []).filter((a) => a && a.key !== undefined && Number.isFinite(a.x) && Number.isFinite(a.z)).slice(0, AV_MAX).map((a) => ({
-        key: String(a.key), look: (a.look || []).slice(), L: lookColors(a.look), nick: String(a.nick || ''), x: a.x, z: a.z, h: Number.isFinite(a.h) ? a.h : 0,
-        mine: !!a.mine, yaw: old.has(String(a.key)) ? old.get(String(a.key)).yaw : 0, seed: (hash(String(a.key)) % 1000) / 100 }));
-      if (crowd) crowd.setAvatars(avs.map((a) => ({ key: a.key, x: a.x, z: a.z, h: a.h, nick: a.nick })));
+      avs = (list || []).filter((a) => a && a.key !== undefined && Number.isFinite(a.x) && Number.isFinite(a.z)).slice(0, AV_MAX).map((a) => {
+        const key = String(a.key), o = old.get(key), mode = a.mode === 1 ? 1 : 0, seed = Number.isInteger(a.seed) && a.seed >= 0 ? a.seed : 0;
+        const home = { x: a.x, z: a.z, h: Number.isFinite(a.h) ? a.h : 0 };
+        const r = { key, look: (a.look || []).slice(), L: lookColors(a.look), nick: String(a.nick || ''), mode, seed, home, mine: !!a.mine,
+                    x: home.x, z: home.z, h: home.h, yaw: o ? o.yaw : 0, wob: (hash(key) % 1000) / 100, moving: false, phase: o ? o.phase : 0, plan: null, trip: null };
+        if (!o) return r;
+        if (mode === 1) {   // 같은 집 · 같은 씨앗이면 계산해 둔 길을 그대로 써요
+          if (o.mode === 1 && o.plan && o.seed === seed && o.home.x === home.x && o.home.z === home.z) r.plan = o.plan;
+          r.x = o.x; r.z = o.z; r.h = o.h;
+        } else {
+          r.x = o.x; r.z = o.z; r.h = o.h;
+          if (drv && drv.key === key) { /* 조종하는 중이면 화면의 자리를 그대로 둬요 */ }
+          else if (o.trip && o.home.x === home.x && o.home.z === home.z) r.trip = o.trip;
+          else if (Math.hypot(o.x - home.x, o.z - home.z) > 0.3) {   // 다른 곳(다른 방문자 화면)에서 옮겼어요: 걸어서 가요. 길을 못 찾으면 바로 옮겨요
+            const pts = avConnect(o.x, o.z, home.x, home.z, 320, 0.7);
+            if (pts) r.trip = makeTrip(pts, home.h, 1.4); else { r.x = home.x; r.z = home.z; r.h = home.h; }
+          } else { r.x = home.x; r.z = home.z; r.h = home.h; }
+        }
+        return r;
+      });
+      if (crowd) { crowd.setAvatars(avs.map((a) => ({ key: a.key, x: a.x, z: a.z, h: a.h, nick: a.nick, moving: a.moving }))); avSt = new Map(crowd.avatars.map((q) => [q.key, q])); }
       for (const p of avParts) p.mesh.count = avs.length;
       avBlob.count = avs.length;
       colorBodies(avParts, avs.map((a) => ({ look: a.L })));
+      if (drv && !avs.some((a) => a.key === drv.key)) driveEnd('gone');
+      if (seen && !avs.some((a) => a.key === seen.key)) seen = null;
+      if (follow && !avs.some((a) => a.key === follow.key)) follow = null;
+    }
+    // 걷기 (혼자 돌아다니기 · 조종하기 · 다른 화면에서 옮긴 캐릭터): 장면마다 자리를 정하고, 학생 움직임 쪽에도 알려 줘요
+    function stepAvatars(dt, vis) {
+      const now = avNow(), t0 = performance.now();
+      for (const a of avs) {
+        let mv = 0, want = a.home.h;
+        if (drv && drv.key === a.key) { mv = driveStep(a, dt); want = drv.want; }
+        else if (a.mode === 1) {
+          if (!a.plan && performance.now() - t0 < 6) a.plan = wanderPlan(a.home.x, a.home.z, a.seed);   // 한 장면에 6ms 까지만 길을 계산해요
+          if (a.plan && a.plan.T > 0) {
+            const p = wanderAt(a.plan, now);
+            mv = Math.hypot(p.x - a.x, p.z - a.z); if (mv > 4) mv = 0;   // 처음 자리를 잡을 때는 걷는 모습 없이
+            a.x = p.x; a.z = p.z; a.moving = p.moving; want = p.h;
+          } else { a.x = a.home.x; a.z = a.home.z; a.moving = false; }
+        } else if (a.trip) {
+          const T = a.trip; T.s = Math.min(T.len, T.s + T.speed * dt);
+          const p = alongPts(T, T.s); mv = Math.hypot(p.x - a.x, p.z - a.z); a.x = p.x; a.z = p.z; want = p.h; a.moving = true;
+          if (T.s >= T.len) { a.trip = null; a.moving = false; a.x = a.home.x; a.z = a.home.z; want = T.hEnd; }
+        } else { a.moving = false; a.x = a.home.x; a.z = a.home.z; }
+        a.h += angDiff(want, a.h) * Math.min(1, dt * (a.moving ? 9 : 4));
+        if (mv > 0) a.phase += mv / (0.62 * vis) * Math.PI;
+        const st = avSt.get(a.key);
+        if (st) { st.x = a.x; st.z = a.z; st.h = a.h; st.moving = a.moving; }
+      }
     }
     function avPose(a, t, dt) {
       const p = POSE0(), st = avState(a.key), now = crowd ? crowd.time : 0;
+      if (a.moving) {   // 걷기: 학생들과 같은 걸음 (뛰면 크게). 냄새 구역에서는 걸으면서 코를 막아요
+        const A = drv && drv.key === a.key && drv.run ? 0.62 : 0.45, s = Math.sin(a.phase);
+        p.legL = A * s; p.legR = -A * s; p.armLx = -0.8 * A * s; p.armRx = 0.8 * A * s; p.bob = Math.abs(Math.cos(a.phase)) * 0.035;
+        if (st && st.react) { p.armRx = -2.45; p.armRz = -0.5; }
+        a.yaw += (0 - a.yaw) * Math.min(1, dt * 5); p.yaw = a.yaw;
+        return p;
+      }
       if (st && st.react) NOSE(p, t);
       else if (st && now >= st.waveFrom && now < st.waveUntil) { WAVE(p, t); p.head = 0.04; }
-      else { p.armLx = 0.05 * Math.sin(t * 1.1 + a.seed); p.head = 0.04 * Math.sin(t * 0.7 + a.seed); p.bob = 0.006 * (1 + Math.sin(t * 2 + a.seed)); }   // 숨 쉬듯 살짝
+      else { p.armLx = 0.05 * Math.sin(t * 1.1 + a.wob); p.head = 0.04 * Math.sin(t * 0.7 + a.wob); p.bob = 0.006 * (1 + Math.sin(t * 2 + a.wob)); }   // 숨 쉬듯 살짝
       // 가까이 걷는 학생 쪽으로 고개를 돌려요 (몸 방향에서 ±1.1 라디안까지)
       const want = st && st.watch !== null && !st.react ? Math.max(-1.1, Math.min(1.1, angDiff(st.watch, a.h))) : 0;
       a.yaw += (want - a.yaw) * Math.min(1, dt * 3);
@@ -2770,6 +2886,217 @@
       }
       const h = nearE ? Math.atan2(nearE[0] - px, nearE[1] - pz) : Math.atan2(camera.position.x - px, camera.position.z - pz);
       return { ok: true, x: Math.round(px * 100) / 100, z: Math.round(pz * 100) / 100, h: Math.round(h * 100) / 100, moved: Math.hypot(px - x, pz - z) > 0.01 };
+    }
+    // ---- 걸을 수 있는 땅: 캠퍼스 네모 안 · 건물 · 물 · 조각상 · 나무 줄기가 아닌 곳. pad 1 = 혼자 돌아다니기 (넉넉히), 0.7 = 조종하기
+    const treeGrid = new Map();
+    for (const [x, z] of treePts) { const k = Math.floor(x / 4) + ',' + Math.floor(z / 4); if (!treeGrid.has(k)) treeGrid.set(k, []); treeGrid.get(k).push(x, z); }
+    function nearTree(x, z, r) {
+      const gx = Math.floor(x / 4), gz = Math.floor(z / 4);
+      for (let i = gx - 1; i <= gx + 1; i++) for (let j = gz - 1; j <= gz + 1; j++) {
+        const l = treeGrid.get(i + ',' + j); if (!l) continue;
+        for (let k = 0; k < l.length; k += 2) { const dx = l[k] - x, dz = l[k + 1] - z; if (dx * dx + dz * dz < r * r) return true; }
+      }
+      return false;
+    }
+    function walkOk(x, z, pad) {
+      if (!(x > R.x0 + 4 && x < R.x1 - 4 && z > R.z0 + 4 && z < R.z1 - 4)) return false;
+      if (ringHit(bldRings, x, z, 0.5 * pad) || ringHit(waterRings, x, z, 0.3 * pad)) return false;
+      for (const q of statueSpots) { const dx = x - q.x, dz = z - q.z, rr = q.r + 0.2; if (dx * dx + dz * dz < rr * rr) return false; }
+      return !nearTree(x, z, 0.55 * pad);
+    }
+    const blockWhy = (x, z) => (!(x > R.x0 + 4 && x < R.x1 - 4 && z > R.z0 + 4 && z < R.z1 - 4) ? 'out' : ringHit(bldRings, x, z, 0.35) ? 'building' : ringHit(waterRings, x, z, 0.21) ? 'water'
+      : statueSpots.some((q) => Math.hypot(x - q.x, z - q.z) < q.r + 0.2) ? 'statue' : nearTree(x, z, 0.385) ? 'tree' : '');
+    // a → b 곧은 줄이 걸을 수 있는 땅 위로만 지나가는지 (0.5m 마다 봐요. 출발점은 빼요)
+    function segOk(ax, az, bx, bz, pad) {
+      const L = Math.sqrt((bx - ax) * (bx - ax) + (bz - az) * (bz - az)), n = Math.max(1, Math.ceil(L / 0.5));
+      for (let i = 1; i <= n; i++) { const t = i / n; if (!walkOk(ax + (bx - ax) * t, az + (bz - az) * t, pad)) return false; }
+      return true;
+    }
+    // 길 마디 사이 가장 짧은 길 (학생들과 같은 길 그물. 냄새 구역은 생각하지 않아요 → 언제 계산해도 같아요)
+    function graphRoute(from, to) {
+      const NN = walk.nodes.length, D = new Float64Array(NN).fill(Infinity), prev = new Int32Array(NN).fill(-1), done = new Uint8Array(NN);
+      D[from] = 0;
+      for (;;) {
+        let u = -1, best = Infinity;
+        for (let i = 0; i < NN; i++) if (!done[i] && D[i] < best) { best = D[i]; u = i; }
+        if (u < 0 || u === to) break;
+        done[u] = 1;
+        for (const ei of walk.nodes[u].adj) { const e = walk.edges[ei], v = e.a === u ? e.b : e.a, c = best + e.L; if (c < D[v]) { D[v] = c; prev[v] = u; } }
+      }
+      if (!isFinite(D[to])) return null;
+      const out = []; for (let v = to; v >= 0; v = prev[v]) out.push(v);
+      return out.reverse();
+    }
+    function nodeNear(x, z, pad) {   // (x, z) 에서 곧게 갈 수 있는 가까운 길 마디 (40m 안 가까운 6개 중)
+      const c = [];
+      walk.nodes.forEach((n, i) => { const d = Math.sqrt((n.x - x) * (n.x - x) + (n.z - z) * (n.z - z)); if (d < 40) c.push([d, i]); });
+      c.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+      for (const [, i] of c.slice(0, 6)) if (segOk(x, z, walk.nodes[i].x, walk.nodes[i].z, pad)) return i;
+      return -1;
+    }
+    // a → b 로 걷는 길: 곧게 갈 수 있으면 곧게, 아니면 가까운 길 마디로 나가서 길을 따라가요. maxLen m 보다 길면 null
+    function avConnect(ax, az, bx, bz, maxLen, pad) {
+      if (segOk(ax, az, bx, bz, pad)) return [[ax, az], [bx, bz]];
+      if (walk.nodes.length < 2) return null;
+      const na = nodeNear(ax, az, pad), nb = nodeNear(bx, bz, pad);
+      if (na < 0 || nb < 0) return null;
+      const r = na === nb ? [na] : graphRoute(na, nb);
+      if (!r) return null;
+      const pts = [[ax, az]].concat(r.map((i) => [walk.nodes[i].x, walk.nodes[i].z]), [[bx, bz]]);
+      let L = 0; for (let i = 1; i < pts.length; i++) L += Math.sqrt((pts[i][0] - pts[i - 1][0]) ** 2 + (pts[i][1] - pts[i - 1][1]) ** 2);
+      return L <= maxLen ? pts : null;
+    }
+    function makeTrip(pts, hEnd, speed) {
+      const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.sqrt((pts[i][0] - pts[i - 1][0]) ** 2 + (pts[i][1] - pts[i - 1][1]) ** 2));
+      const len = cum[cum.length - 1];
+      return { pts, cum, len, s: 0, hEnd, speed: Math.max(speed, len / 45) };   // 먼 길은 45초 안에 닿게 조금 빨리
+    }
+    function alongPts(g, s) {   // g = { pts, cum }: s m 걸은 자리와 걷는 방향
+      const P = g.pts, C = g.cum;
+      let i = 1; while (i < P.length - 1 && C[i] < s) i++;
+      const a = P[i - 1], b = P[i], L = C[i] - C[i - 1] || 1, t = Math.max(0, Math.min(1, (s - C[i - 1]) / L));
+      return { x: a[0] + (b[0] - a[0]) * t, z: a[1] + (b[1] - a[1]) * t, h: Math.atan2(b[0] - a[0], b[1] - a[1]) };
+    }
+    // 혼자 돌아다니기 길: 집(세운 자리)에서 반지름 안의 곳 몇 군데를 들렀다가 집으로 돌아와요. 들른 곳마다 잠깐 쉬어요.
+    //   씨앗 값 · 집 자리 · 지도만으로 정해져요 (삼각 함수 없이 골라서, 어느 브라우저에서 계산해도 같은 길이에요)
+    function wanderPlan(hx, hz, seed) {
+      const P = wanderParams(seed), r = rng(hash('route|' + seed + '|' + Math.round(hx * 100) + '|' + Math.round(hz * 100)));
+      const stops = [{ x: hx, z: hz, pts: null }], R2 = P.radius * P.radius, maxLeg = P.radius * 3 + 40;
+      for (let tries = 0; stops.length <= P.stops && tries < P.stops * 16; tries++) {
+        const dx = (2 * r() - 1) * P.radius, dz = (2 * r() - 1) * P.radius, d2 = dx * dx + dz * dz;
+        if (d2 > R2 || d2 < 9) continue;
+        const x = cm(hx + dx), z = cm(hz + dz);
+        if (!walkOk(x, z, 1)) continue;
+        const pv = stops[stops.length - 1], pts = avConnect(pv.x, pv.z, x, z, maxLeg, 1);
+        if (pts) stops.push({ x, z, pts });
+      }
+      let back = null;
+      while (stops.length > 1 && !(back = avConnect(stops[stops.length - 1].x, stops[stops.length - 1].z, hx, hz, maxLeg, 1))) stops.pop();
+      if (stops.length < 2) return { T: 0, segs: [], stops: 0, len: 0, speed: P.speed, params: P };
+      const legs = stops.slice(1).map((q) => q.pts).concat([back]);
+      const segs = []; let t = 0, len = 0;
+      for (const pts of legs) {
+        const cum = [0];
+        for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.sqrt((pts[i][0] - pts[i - 1][0]) ** 2 + (pts[i][1] - pts[i - 1][1]) ** 2));
+        const L = cum[cum.length - 1];
+        if (L > 0.01) { segs.push({ walk: true, pts, cum, len: L, t0: t, t1: t + L / P.speed }); t += L / P.speed; len += L; }
+        const end = pts[pts.length - 1], b = pts[Math.max(0, pts.length - 2)], rest = P.pause * (0.6 + 0.8 * r());
+        segs.push({ walk: false, x: end[0], z: end[1], h: Math.atan2(end[0] - b[0], end[1] - b[1]), t0: t, t1: t + rest }); t += rest;
+      }
+      return { T: t, segs, stops: stops.length - 1, len, speed: P.speed, params: P, phase: (hash('phase|' + seed) % 100000) / 100000 * t };
+    }
+    function wanderAt(plan, sec) {
+      const tau = (((sec + plan.phase) % plan.T) + plan.T) % plan.T, S = plan.segs;
+      let lo = 0, hi = S.length - 1;
+      while (lo < hi) { const m = (lo + hi + 1) >> 1; if (S[m].t0 <= tau) lo = m; else hi = m - 1; }
+      const g = S[lo];
+      if (!g.walk) return { x: g.x, z: g.z, h: g.h, moving: false };
+      const p = alongPts(g, (tau - g.t0) * plan.speed);
+      return { x: p.x, z: p.z, h: p.h, moving: true };
+    }
+
+    // ---- 내 캐릭터 조종하기: 땅을 누르면 그곳으로 걸어가요. 방향키 · WASD 로도 걸어요 (Shift 를 누르면 뛰어요).
+    //   멈추고 0.6초 지나면 cb({ type: 'stop', key, x, z, h }) 로 알려 줘요 (그 자리를 저장해요). 사진기는 캐릭터를 따라가요
+    let drv = null, follow = null, seen = null;   // 조종 · 사진기 따라가기 · 찾기 표시
+    const DRIVE_V = 1.8, RUN_V = 3.6;
+    function driveStart(key, cb) {
+      const a = avs.find((q) => q.key === String(key)); if (!a) return false;
+      if (drv) driveEnd('switch');
+      if (placing) api.cancelPlacing();
+      a.trip = null;
+      drv = { key: a.key, cb: cb || null, path: null, keys: new Set(), run: false, still: 0, dirty: false, want: a.h };
+      follow = { key: a.key, lx: a.x, lz: a.z, until: Infinity };
+      wrap.classList.add('m3-driving');
+      return true;
+    }
+    function driveStopped(a) {
+      drv.dirty = false; a.home = { x: a.x, z: a.z, h: a.h };
+      if (drv.cb) drv.cb({ type: 'stop', key: a.key, x: cm(a.x), z: cm(a.z), h: cm(normAng(a.h)) });
+    }
+    function driveEnd(reason) {
+      if (!drv) return;
+      const d = drv, a = avs.find((q) => q.key === d.key);
+      if (a) { a.moving = false; if (d.dirty) driveStopped(a); }
+      drv = null; wrap.classList.remove('m3-driving');
+      if (follow && follow.key === d.key) follow = null;
+      if (d.cb) d.cb({ type: 'end', key: d.key, why: reason || 'stop' });
+    }
+    function driveTo(x, z) {
+      if (!drv) return { ok: false, why: 'off' };
+      const a = avs.find((q) => q.key === drv.key); if (!a) return { ok: false, why: 'gone' };
+      const st = canStand(x, z, a.key);   // 서 있을 수 있는 곳이면 그 자리로 (길 한가운데를 누르면 길 옆에 서요)
+      let tx = x, tz = z;
+      if (st.ok) { tx = st.x; tz = st.z; } else if (st.why !== 'path' && st.why !== 'crowded') return { ok: false, why: st.why };
+      const w = blockWhy(tx, tz); if (w) return { ok: false, why: w };
+      const pts = avConnect(a.x, a.z, tx, tz, 700, 0.7);
+      if (!pts) return { ok: false, why: 'noroute' };
+      drv.path = makeTrip(pts, null, DRIVE_V); drv.path.speed = DRIVE_V; drv.keys.clear(); drv.still = 0;
+      showTap(tx, tz);
+      return { ok: true, x: cm(tx), z: cm(tz), len: Math.round(drv.path.len * 10) / 10 };
+    }
+    function driveStep(a, dt) {
+      const d = drv, k = d.keys; let mv = 0;
+      const fw = (k.has('f') ? 1 : 0) - (k.has('b') ? 1 : 0), rt = (k.has('r') ? 1 : 0) - (k.has('l') ? 1 : 0);
+      if (fw || rt) {   // 화면 기준: 위 = 화면 안쪽, 아래 = 사진기 쪽, 왼쪽 · 오른쪽
+        d.path = null;
+        const fx0 = controls.target.x - camera.position.x, fz0 = controls.target.z - camera.position.z, fl = Math.hypot(fx0, fz0) || 1, fx = fx0 / fl, fz = fz0 / fl;
+        let mx = fw * fx - rt * fz, mz = fw * fz + rt * fx; const ml = Math.hypot(mx, mz) || 1, step = (d.run ? RUN_V : DRIVE_V) * dt;
+        mx = mx / ml * step; mz = mz / ml * step; d.want = Math.atan2(mx, mz);
+        if (walkOk(a.x + mx, a.z + mz, 0.7)) { a.x += mx; a.z += mz; mv = step; }   // 막히면 벽을 따라 미끄러져요
+        else if (Math.abs(mx) > 1e-4 && walkOk(a.x + mx, a.z, 0.7)) { a.x += mx; mv = Math.abs(mx); }
+        else if (Math.abs(mz) > 1e-4 && walkOk(a.x, a.z + mz, 0.7)) { a.z += mz; mv = Math.abs(mz); }
+      } else if (d.path) {
+        const T = d.path; T.s = Math.min(T.len, T.s + T.speed * (d.run ? 2 : 1) * dt);
+        const p = alongPts(T, T.s); mv = Math.hypot(p.x - a.x, p.z - a.z); a.x = p.x; a.z = p.z; if (mv > 1e-4) d.want = p.h;
+        if (T.s >= T.len) d.path = null;
+      }
+      a.moving = mv > 1e-4;
+      if (a.moving) { d.still = 0; d.dirty = true; }
+      else if (d.dirty && (d.still += dt) > 0.6) driveStopped(a);
+      return mv;
+    }
+    const KEYMAP = { ArrowUp: 'f', KeyW: 'f', ArrowDown: 'b', KeyS: 'b', ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r' };
+    const typing = (el) => !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName || ''));
+    const onKeyDown = (e) => {
+      if (!drv || e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return;
+      drv.run = e.shiftKey;
+      const k = KEYMAP[e.code]; if (!k) return;
+      drv.keys.add(k); e.preventDefault();
+    };
+    const onKeyUp = (e) => { if (!drv) return; drv.run = e.shiftKey; const k = KEYMAP[e.code]; if (k) drv.keys.delete(k); };
+    const onBlur = () => { if (drv) { drv.keys.clear(); drv.run = false; } };
+    if (root.addEventListener) { root.addEventListener('keydown', onKeyDown); root.addEventListener('keyup', onKeyUp); root.addEventListener('blur', onBlur); }
+    // 누른 곳 표시 (1초 동안 퍼지는 고리)
+    const tapMark = new T.Mesh(new T.RingGeometry(0.45, 0.7, 28), new T.MeshBasicMaterial({ color: 0x1c7ed6, transparent: true, opacity: 0, depthTest: false }));
+    tapMark.rotation.x = -Math.PI / 2; tapMark.renderOrder = 21; tapMark.visible = false; scene.add(tapMark);
+    let tapAt = -1;
+    function showTap(x, z) { tapMark.position.set(x, hMesh(x, z) + 0.08, z); tapAt = performance.now(); tapMark.visible = true; }
+    // 찾기 표시: 캐릭터 머리 위에서 통통 튀는 화살표와 발밑에 퍼지는 고리 (9초 동안)
+    const findMark = new T.Group(); findMark.visible = false; scene.add(findMark);
+    const fmCone = new T.Mesh(new T.ConeGeometry(0.42, 0.95, 18), new T.MeshBasicMaterial({ color: 0x1c7ed6, transparent: true, opacity: 0.95, depthTest: false }));
+    fmCone.rotation.x = Math.PI; fmCone.renderOrder = 31; findMark.add(fmCone);
+    const fmRing = new T.Mesh(new T.RingGeometry(0.7, 1.0, 32), new T.MeshBasicMaterial({ color: 0x1c7ed6, transparent: true, opacity: 0.9, depthTest: false }));
+    fmRing.rotation.x = -Math.PI / 2; fmRing.renderOrder = 31; findMark.add(fmRing);
+    function drawMarks(vis, t, now) {
+      if (tapMark.visible) { const k = (now - tapAt) / 900; if (k >= 1) tapMark.visible = false; else { tapMark.material.opacity = 0.9 * (1 - k); const sc = (0.8 + k * 1.2) * vis; tapMark.scale.set(sc, sc, 1); } }
+      if (seen && now >= seen.until) seen = null;
+      // 조종하는 동안에는 발밑 고리만 늘 보여요 (나무 · 건물 뒤에 가려도 어디 있는지 알 수 있게)
+      const a = seen ? avs.find((q) => q.key === seen.key) : drv ? avs.find((q) => q.key === drv.key) : null;
+      if (!a) { findMark.visible = false; return; }
+      findMark.position.set(a.x, hMesh(a.x, a.z) + FOOT, a.z); findMark.scale.set(vis, vis, vis); findMark.visible = true;
+      fmCone.visible = !!seen; fmCone.position.y = 3.35 + 0.2 * Math.sin(t * 5.5);   // 이름표 위에서 통통
+      const k = seen ? (t * 1.1) % 1 : 0.25 + 0.1 * Math.sin(t * 3);
+      fmRing.scale.set(0.75 + k * 0.9, 0.75 + k * 0.9, 1); fmRing.material.opacity = seen ? 0.9 * (1 - k) : 0.75; fmRing.position.y = 0.06;
+    }
+    // 사진기 따라가기: 캐릭터가 움직인 만큼 기준점과 사진기를 같이 옮겨요 (돌리기 · 확대는 그대로 할 수 있어요)
+    function followStep(now) {
+      if (!follow) return;
+      const a = avs.find((q) => q.key === follow.key);
+      if (!a || now > follow.until) { follow = null; return; }
+      const dx = a.x - follow.lx, dz = a.z - follow.lz;
+      if (Math.abs(dx) < 1e-6 && Math.abs(dz) < 1e-6) return;
+      controls.target.x += dx; controls.target.z += dz; camera.position.x += dx; camera.position.z += dz;
+      follow.lx = a.x; follow.lz = a.z;
     }
     // 세울 자리 고르기: 마우스를 따라 반투명 캐릭터가 움직이고, 발밑 고리가 초록(세울 수 있음) · 빨강(안 됨)으로 보여요
     const ghost = new T.Group(); ghost.visible = false; scene.add(ghost);
@@ -2881,13 +3208,19 @@
         const cand = avs.map((a) => { bv.set(a.x, hMesh(a.x, a.z) + FOOT + 1.95 * vis + 0.15, a.z); return { a, d: bv.distanceTo(camera.position), p: bv.project(camera).clone() }; })
           .filter((q) => q.p.z < 1 && q.p.x > -1.05 && q.p.x < 1.05 && q.p.y > -1.05 && q.p.y < 1.05)
           .sort((p, q) => (q.a.mine ? 1 : 0) - (p.a.mine ? 1 : 0) || p.d - q.d);
+        if (seen) { const k = cand.findIndex((q) => q.a.key === seen.key); if (k > 0) cand.unshift(cand.splice(k, 1)[0]); }
         let others = 0;
         for (const q of cand) {
           if (!q.a.mine && ++others > 20) continue;
           let el = avLabels.get(q.a.key);
           if (!el) { el = document.createElement('div'); el.className = 'm3-av'; el.setAttribute('aria-hidden', 'true'); overlay.appendChild(el); avLabels.set(q.a.key, el); }
-          const html = (q.a.mine ? '<b>나</b>' : '') + esc(q.a.nick || '방문자');
-          if (el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; el.classList.toggle('mine', q.a.mine); el._w = el.offsetWidth; el._h = el.offsetHeight; }
+          const sig = (q.a.mine ? '1' : '0') + (seen && seen.key === q.a.key ? '1' : '0') + (q.a.nick || '방문자');
+          if (el.dataset.h !== sig) {   // 이름은 방문자가 지은 글이라 글자(textContent)로만 넣어요
+            el.textContent = '';
+            if (q.a.mine) { const b = document.createElement('b'); b.textContent = '나'; el.appendChild(b); }
+            el.appendChild(document.createTextNode(q.a.nick || '방문자'));
+            el.dataset.h = sig; el.classList.toggle('mine', q.a.mine); el.classList.toggle('find', !!(seen && seen.key === q.a.key)); el._w = el.offsetWidth; el._h = el.offsetHeight;
+          }
           const x = (q.p.x + 1) / 2 * VW, y = (1 - q.p.y) / 2 * VH;
           el.style.display = '';
           el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
@@ -2977,13 +3310,47 @@
         says: crowd ? crowd.npcs.filter((n) => n.say).map((n) => ({ id: n.id, text: n.say.text, kind: n.say.kind })) : [],
         bubbleEls: [...bubbles].filter(([, b]) => b.el.style.display !== 'none').map(([k, b]) => ({ key: k, text: b.el.textContent, cls: b.el.className })),
       }),
-      // 방문자 캐릭터: list = [{ key, look: [번호 9개], nick: '졸린 코끼리', x, z, h, mine }]
+      // 방문자 캐릭터: list = [{ key, look: [번호 9개], nick: '보여 줄 이름', mode: 0 | 1, seed, x, z, h, mine }]
+      //   mode 1 = 혼자 돌아다니기 (x · z 는 집 자리), 0 = 내가 조종하기 (x · z 에 서 있어요)
       setAvatars(list) { setAvatarsNow(list); },
       avatars: () => avs.map((a) => {
         const st = avState(a.key), lab = avLabels.get(a.key);
-        return { key: a.key, x: a.x, z: a.z, h: a.h, mine: a.mine, nick: a.nick, look: a.look.slice(), say: st && st.say ? st.say.text : null, react: !!(st && st.react),
+        return { key: a.key, x: a.x, z: a.z, h: a.h, mine: a.mine, nick: a.nick, look: a.look.slice(), mode: a.mode, seed: a.seed, home: { ...a.home }, moving: a.moving,
+                 driving: !!(drv && drv.key === a.key), found: !!(seen && seen.key === a.key), trip: !!a.trip,
+                 say: st && st.say ? st.say.text : null, react: !!(st && st.react),
                  waving: !!(st && crowd && crowd.time >= st.waveFrom && crowd.time < st.waveUntil), greeted: st ? st.greeted : 0, label: !!(lab && lab.style.display !== 'none') };
       }),
+      // 서버 시계와 이 컴퓨터 시계의 차이 (밀리초). 혼자 돌아다니는 캐릭터를 모든 방문자가 같은 시각으로 그려요
+      setClock(offMs) { if (Number.isFinite(offMs)) clockOff = offMs; },
+      clock: () => clockOff,
+      // 혼자 돌아다니는 길 (시험 · 안내용): 들르는 곳 수 · 한 바퀴 시간 · 길이 · 걸음 빠르기
+      wanderOf(key) {
+        const a = avs.find((q) => q.key === String(key)); if (!a || a.mode !== 1) return null;
+        if (!a.plan) a.plan = wanderPlan(a.home.x, a.home.z, a.seed);
+        return { stops: a.plan.stops, T: +a.plan.T.toFixed(2), len: +a.plan.len.toFixed(2), speed: a.plan.speed, params: { ...a.plan.params } };
+      },
+      // sec 초(서버 시계)에 key 캐릭터가 있을 자리 (시험용: 두 창에서 같은지 봐요)
+      wanderAt(key, sec) { const a = avs.find((q) => q.key === String(key)); if (!a || a.mode !== 1) return null; if (!a.plan) a.plan = wanderPlan(a.home.x, a.home.z, a.seed); return a.plan.T > 0 ? wanderAt(a.plan, sec) : { x: a.home.x, z: a.home.z, h: a.home.h, moving: false }; },
+      // 조종하기: cb 로 { type: 'go' | 'blocked' (why) | 'stop' (x, z, h) | 'end' } 을 알려 줘요
+      driveStart: (key, cb) => driveStart(key, cb),
+      driveStop: () => driveEnd('stop'),
+      driveTo: (x, z) => driveTo(x, z),
+      driving: () => (drv ? drv.key : null),
+      // 시험용: 방향 누르기 (f · b · l · r 를 고른 만큼 누른 채로)
+      driveKeys(list, run) { if (!drv) return false; drv.keys = new Set(list || []); drv.run = !!run; return true; },
+      // 찾기: 가까이 가서 보고 9초 동안 표시해요. 걷는 캐릭터면 30초 동안 사진기가 따라가요 (지도를 움직이면 멈춰요). o = { dist, phi }
+      findAvatar(key, o) {
+        const a = avs.find((q) => q.key === String(key)); if (!a) return null;
+        const v = api.viewClear(a.x, a.z, (o && o.dist) || 32, (o && o.phi) || 0.95, a.h);
+        const now = performance.now();
+        seen = { key: a.key, until: now + 9000 };
+        if (drv && drv.key === a.key) follow = { key: a.key, lx: a.x, lz: a.z, until: Infinity };
+        else follow = a.mode === 1 || a.trip ? { key: a.key, lx: a.x, lz: a.z, until: now + 30000 } : null;
+        for (const el of avLabels.values()) el.dataset.h = '';
+        return { x: cm(a.x), z: cm(a.z), view: v };
+      },
+      following: () => (follow ? follow.key : null),
+      walkOk: (x, z, pad) => walkOk(x, z, pad ?? 0.7),
       canStand: (x, z, ignoreKey) => canStand(x, z, ignoreKey),
       // 세울 자리 고르기: 땅을 누르면 cb({ ok, x, z, h }) 또는 cb({ ok: false, why }) (why: out · building · water · path · crowded · cancel)
       startPlacing(look, key, cb) { placing = { look: (look || []).slice(), key: key ?? null, cb }; dressGhost(look); wrap.classList.add('m3-placing'); hover = null; },
@@ -3012,7 +3379,10 @@
         statueSpots: () => statueSpots.map((s) => Object.assign({}, s)),
       },
       renderer, camera, controls, scene,
-      dispose() { cancelAnimationFrame(raf); ro.disconnect(); renderer.dispose(); wrap.remove(); },
+      dispose() {
+        cancelAnimationFrame(raf); ro.disconnect(); renderer.dispose(); wrap.remove();
+        if (root.removeEventListener) { root.removeEventListener('keydown', onKeyDown); root.removeEventListener('keyup', onKeyUp); root.removeEventListener('blur', onBlur); }
+      },
     };
 
     // 색 섞기는 예전처럼 sRGB 값에서 해요 (선형으로 섞으면 경고 색이 옅어 보여요)
@@ -3192,6 +3562,7 @@
       const t = (now - t0) / 1000, dt = lastNow ? Math.min(0.25, Math.max(0, (now - lastNow) / 1000)) : 0;
       lastNow = now;
       adapt(now);
+      followStep(now);
       controls.update();
       for (const s of sensors.values()) {
         if (ALERT[s.state]) {
@@ -3201,6 +3572,7 @@
         } else if (s.ring.material.opacity) { s.ring.material.opacity = 0; s.ring.scale.set(1, 1, 1); }
       }
       const vis = visScale();
+      if (avs.length) stepAvatars(dt, vis);
       if (crowd && (studentsOn || avs.length)) {
         crowd.setZones(smokeZones());
         // 보이는 곳: 카메라가 보는 땅 둘레. 잡담 말풍선은 이 안에서 4개(휴대폰 2개)까지 띄워요
@@ -3209,6 +3581,7 @@
         if (studentsOn && STU_N) drawStudents(vis, t);
       }
       if (avs.length) drawAvatars(vis, t, dt);
+      drawMarks(vis, t, now);
       if (placing && hover) { placeTry(hover.x, hover.y, false); hover = null; }
       if (now - shadowAt > SHADOW_MS) { renderer.shadowMap.needsUpdate = true; shadowAt = now; }
       sky.position.copy(camera.position);
@@ -3264,6 +3637,11 @@
       if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6 && !editing) {
         const id = sensorHit(e);
         if (id && api.onSelect) api.onSelect(id);
+        else if (drv) {   // 조종하는 중: 누른 땅으로 걸어가요
+          const p = groundUnder(e.clientX, e.clientY);
+          const r = p ? driveTo(p.x, p.z) : { ok: false, why: 'out' };
+          if (drv && drv.cb) drv.cb(Object.assign({ type: r.ok ? 'go' : 'blocked', key: drv.key }, r));
+        }
       }
       down = null;
     });
@@ -3272,5 +3650,5 @@
     return api;
   }
 
-  root.AirfaroMap3D = { create, PALETTE, buildWalkGraph, makeCrowd, placeKind, shortName, timeKind, AVATAR, lookOk, nickOk, nickName, lookColors, CHAT: { TALK, THINK, ARRIVE, PASS, CALL, GREET, SMELL_TEXT } };
+  root.AirfaroMap3D = { create, PALETTE, buildWalkGraph, makeCrowd, placeKind, shortName, timeKind, AVATAR, lookOk, nickOk, nickName, lookColors, NAME_RULES, nameClean, nameCheck, avatarName, WANDER, wanderParams, CHAT: { TALK, THINK, ARRIVE, PASS, CALL, GREET, SMELL_TEXT } };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -148,7 +148,9 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
          font: 700 11px/1.6 var(--f-body); white-space: nowrap; border: 1px solid rgba(0, 0, 0, .14); will-change: transform; }
 .m3-av.mine { border: 2px solid var(--accent); }
 .m3-av b { display: inline-block; background: var(--accent); color: var(--panel); border-radius: 4px; padding: 0 4px; margin-right: 4px; font-size: 10px; line-height: 1.5; }
+.m3-av.find { border: 2px solid #1c7ed6; box-shadow: 0 0 0 3px rgba(28, 126, 214, .35); }
 .m3-placing canvas { cursor: copy; }
+.m3-driving canvas { cursor: pointer; }
 /* 내 캐릭터 창 (지도 위에 떠요) */
 .avpanel { position: absolute; z-index: 3; left: 10px; top: 10px; width: min(340px, calc(100% - 20px)); max-height: calc(100% - 20px); overflow-y: auto; overscroll-behavior: contain;
            background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 6px 24px rgba(0, 0, 0, .25); padding: 10px 12px 12px; display: grid; gap: 9px; font-size: 13px; }
@@ -165,14 +167,25 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
 .aved { display: grid; gap: 8px; }
 .aved .top { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 10px; align-items: center; }
 .aved .top .avprev { width: 72px; height: 94px; background: var(--bg); border-radius: 10px; }
-.avopt { display: grid; gap: 4px; }
+.avopt { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
 .avopt > span { font-size: 11.5px; color: var(--muted); font-weight: 700; }
 .sw { display: flex; flex-wrap: wrap; gap: 5px; }
 .avpanel .sw button.c { width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 2px solid var(--line); background: var(--c); }
 .avpanel .sw button.c[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--accent); }
 .avpanel .sw button.t[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--panel); }
-.avname { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.avname select { font: inherit; font-size: 13px; padding: 4px 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.avname { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.avname select, .avname input { font: inherit; font-size: 13px; padding: 4px 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.avname input, .aved .top input { width: 100%; min-width: 0; box-sizing: border-box; }
+.aved .top input { font: inherit; font-size: 13px; padding: 4px 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.aved label { font-size: 11.5px; color: var(--muted); font-weight: 700; }
+.avnote { font-size: 11.5px; color: var(--muted); line-height: 1.45; word-break: keep-all; }
+.avnote.err { color: var(--example); font-weight: 700; }
+.avrow .md { font-size: 11.5px; color: var(--muted); }
+.avkey { border-top: 1px solid var(--line); padding-top: 8px; display: grid; gap: 6px; }
+.avkey[open] { gap: 6px; }
+.avkey summary { cursor: pointer; font-weight: 700; font-size: 12.5px; }
+.avkey > * + * { margin-top: 6px; }
+.avkey code { font-family: var(--f-num); font-size: 12px; background: var(--bg); padding: 3px 6px; border-radius: 6px; word-break: break-all; }
 .avbtns { display: flex; flex-wrap: wrap; gap: 6px; }
 .avmsg { font-size: 12.5px; font-weight: 700; color: var(--accent); }
 .avmsg.err { color: var(--example); }
@@ -198,13 +211,13 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
       <button id="btnTop" type="button">위에서 보기</button>
       <button id="btnSpin" type="button">천천히 돌기</button>
       <button id="btnStudents" type="button" aria-pressed="false" title="길을 걷는 꾸밈용 학생 캐릭터를 켜고 꺼요">학생 캐릭터</button>
-      <button id="btnAvatar" type="button" aria-expanded="false" aria-controls="avPanel" title="내 캐릭터를 꾸며서 지도에 세워요">내 캐릭터</button>
+      <button id="btnAvatar" type="button" aria-expanded="false" aria-controls="avPanel" title="내 캐릭터를 꾸미고 이름을 지어 지도에 세워요. 조종하거나 혼자 돌아다니게 할 수 있어요">내 캐릭터</button>
       <button id="btnEdit" type="button">센서 위치 옮기기</button>
       <button id="btnSwitch" type="button" hidden>예시로 보기</button>
     </div>
     <div class="view3d" id="view3d">
       <div class="avpanel" id="avPanel" role="dialog" aria-labelledby="avTitle" hidden></div>
-      <div class="avhint" id="avHint" hidden><span id="avHintText" role="status">캐릭터를 세울 땅을 누르세요</span><button id="avStop" type="button">그만두기</button></div>
+      <div class="avhint" id="avHint" hidden><span id="avHintText" role="status">캐릭터를 세울 땅을 누르세요</span><button id="avGo" type="button" hidden>찾기</button><button id="avStop" type="button">그만두기</button></div>
     </div>
     <div class="editbar" id="editbar" hidden>
       <span>기둥을 끌어서 실제로 설치한 곳에 놓으세요. 30m 안에서 가장 가까운 건물과 이어져요.</span>
@@ -247,7 +260,7 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
       <li>대운동장은 실제처럼 평평한 축구장으로, 정각원과 종각은 기와지붕 전통 건물로 그린 모형이에요. 둘레 땅 높이는 모형에 맞춰 고른 값이라 실제와 조금 달라요.</li>
       <li>팔정도는 실제처럼 평평한 광장으로 그렸어요. 가운데 청동 불상과 화강암 틀, 어른 코끼리 둘과 새끼 하나로 된 석상은 사진을 보고 만들었어요. 명진관 돌벽과 탑, 신공학관 · 중앙도서관 · 정보문화관 · 다향관의 벽과 지붕 색도 사진을 보고 골랐고, 중앙도서관 · 원흥관 · 상록원 지붕에는 옥상 정원을 올렸어요. 그래도 모형이라 크기와 색, 창문 수는 실제와 달라요. 다른 건물은 지도에 있는 윤곽과 높이로 만들고 창문은 어림으로 넣었어요.</li>
       <li>지도 위를 걷는 학생은 화면을 꾸미는 가상 캐릭터라서 실제 사람의 위치도, 냄새를 잰 값도 아니에요. 흡연 의심 센서 둘레에 들어가면 "아 담배 냄새!" 하며 코를 막고 피해 가요. 판단 보류나 공기 변화에는 반응하지 않고, 지도 위 '학생 캐릭터' 단추로 끌 수 있어요. 학생들이 주고받는 말은 미리 써 둔 문장에서 골라 보여 줘요.</li>
-      <li>'내 캐릭터'로 만든 방문자 캐릭터도 꾸밈용이에요. 공개 지도에서는 모든 방문자에게 보이고, 노트북 화면과 미리 보기에서는 그 브라우저에만 보여요. 이름은 정해 둔 낱말 두 개를 골라 붙이는 방식이라 글을 직접 쓸 수는 없어요.</li>
+      <li>'내 캐릭터'로 만든 방문자 캐릭터도 꾸밈용이에요. 공개 지도에서는 모든 방문자에게 보이고, 노트북 화면과 미리 보기에서는 그 브라우저에만 보여요. 이름은 12자까지 직접 지을 수 있고, 욕설과 흡연 · 냄새에 관한 낱말, 긴 숫자는 화면과 서버에서 모두 막아요. 세운 캐릭터는 내가 조종하거나 혼자 돌아다니게 할 수 있어요. 혼자 다니는 길은 정해 둔 값으로 계산해서 누가 보든 같은 때 같은 자리에 있어요.</li>
     </ul>
   </section>
   <section class="card">
@@ -427,11 +440,18 @@ async function pollServer() {
 
 // 공개 서버: 데이터베이스가 준 재료로 server.js 와 같은 상태를 만들어요 (core.js = 공개 서버 함수와 같은 파일)
 let coreMod = null;
+let clockOff = null;   // 서버 시계 - 이 컴퓨터 시계 (밀리초). 혼자 돌아다니는 캐릭터를 모든 방문자가 같은 시각으로 그려요
 async function snapshotStatus(hist, signal) {
+  const t0 = Date.now();
   const res = await fetch(SB + '/rest/v1/rpc/airfaro_snapshot', { method: 'POST', cache: 'no-store', signal,
     headers: { 'Content-Type': 'application/json', apikey: SB_KEY }, body: JSON.stringify({ p_hist: hist }) });
   if (!res.ok) throw new Error('HTTP ' + res.status);
-  const snap = await res.json();
+  const snap = await res.json(), t1 = Date.now();
+  if (Number.isFinite(snap.now) && t1 - t0 < 3000) {   // 오가는 시간의 가운데를 서버 시각으로 봐요. 처음 뒤로는 천천히 맞춰요 (캐릭터가 튀지 않게)
+    const off = snap.now - (t0 + t1) / 2;
+    clockOff = clockOff === null || Math.abs(off - clockOff) > 5000 ? off : clockOff * 0.8 + off * 0.2;
+    if (map && map.setClock) map.setClock(Math.round(clockOff));
+  }
   coreMod = coreMod || import('./core.js');
   let C;
   try { C = await coreMod; } catch (e) { coreMod = null; throw e; }
@@ -510,42 +530,62 @@ function startMap() {
   if (window.CAMPUS.attribution) $('attrib').textContent = window.CAMPUS.attribution;
 }
 
-// ---------------------------------------------------------------- 내 캐릭터 (꾸밈용): 꾸며서 지도에 세우고, 걷는 학생들을 구경해요
+// ---------------------------------------------------------------- 내 캐릭터 (꾸밈용): 꾸미고 이름을 지어 지도에 세워요. 내가 조종하거나 혼자 돌아다니게 해요
 //   공개 지도(Supabase)에서는 모든 방문자에게 보이고, 노트북 서버와 미리 보기에서는 이 브라우저에만 보여요.
-//   서버에는 번호(생김새 9개 · 이름 낱말 2개)와 자리만 보내요. 글을 받지 않아서 이름을 거를 일이 없어요
+//   서버에는 생김새 번호 9개 · 낱말 이름 번호 2개 · 지은 이름(글) · 움직임(0 = 조종, 1 = 돌아다니기) · 씨앗 값 · 자리만 보내요.
+//   지은 이름은 이 화면과 서버가 같은 규칙(map3d.js NAME_RULES = handler.mjs)으로 걸러요. 지도에는 글자로만 넣어요 (HTML 로 넣지 않아요)
 const AVD = window.AirfaroMap3D || null;
-const AV = { MAX: 3, shared: !!SB, owner: '', mine: [], others: [], loaded: false, view: 'list', edit: null, busy: false, msg: '', msgErr: false, confirmDel: null };
+const AV = { MAX: 3, shared: !!SB, owner: '', mine: [], others: [], loaded: false, view: 'list', edit: null, busy: false, msg: '', msgErr: false, confirmDel: null,
+             findAt: -1, welcomed: false, keyAsk: false, keyOpen: false };
 const AV_FN = SB ? SB + '/functions/v1/airfaro/avatar' : '';
 const AV_TEXT = {
   out: '캠퍼스 밖이라 세울 수 없어요.', building: '건물 안에는 세울 수 없어요.', water: '물 위에는 세울 수 없어요.',
   path: '길 한가운데라 세울 수 없어요. 조금 옆을 눌러 주세요.', crowded: '다른 캐릭터와 너무 가까워요.', statue: '조각상 자리라 세울 수 없어요.', net: '서버에 저장하지 못했어요. 인터넷 연결을 확인해 주세요.',
 };
+// 조종할 때 못 가는 곳
+const AV_GO = {
+  out: '캠퍼스 밖으로는 갈 수 없어요.', building: '건물 안으로는 갈 수 없어요.', water: '물 위로는 갈 수 없어요.', statue: '조각상 자리라 갈 수 없어요.',
+  tree: '나무가 있어요. 조금 옆을 눌러 주세요.', noroute: '그곳까지 가는 길을 찾지 못했어요. 더 가까운 곳을 눌러 주세요.',
+};
+const AV_SAVE_GAP = 15000;   // 조종한 자리는 15초에 한 번까지만 서버에 저장해요 (서버는 10분에 40번까지 받아요)
+const AV_KEEP_MS = 7 * 86400e3;   // 서버는 7일 동안 안 바꾼 캐릭터를 지워요 (handler.mjs AVATAR_RULES.KEEP_MS)
 const hex6 = (c) => '#' + Number(c).toString(16).padStart(6, '0');
 const randInt = (n) => { try { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; } catch (e) { return Math.floor(Math.random() * n); } };
+const avSeed = () => 1 + randInt(2147483646);
+const avCm = (v) => Math.round(v * 100) / 100;   // 서버(handler.mjs r2)와 같은 반올림
 function avOwner() {
   let t = store('airfaro.owner');
   if (!/^[0-9a-f]{32}$/.test(t || '')) { t = ''; for (let i = 0; i < 32; i++) t += randInt(16).toString(16); store('airfaro.owner', t); }
   return t;
 }
 const avValid = (a) => a && typeof a.id === 'string' && a.id.length <= 64 && AVD.lookOk(a.look) && AVD.nickOk(a.nick) && Number.isFinite(a.x) && Number.isFinite(a.z);
-function avLoad() { try { const v = JSON.parse(store('airfaro.avatars') || '[]'); AV.mine = (Array.isArray(v) ? v : []).filter(avValid).slice(0, AV.MAX); } catch (e) { AV.mine = []; } }
-function avSave() { store('airfaro.avatars', JSON.stringify(AV.mine.map(({ id, look, nick, x, z, h, t }) => ({ id, look, nick, x, z, h, t })))); }
+// 받은 줄을 한 모양으로: 이 화면의 규칙에 맞지 않는 이름은 낱말 이름으로 보여요
+function avNorm(a) {
+  const nc = typeof a.name === 'string' ? AVD.nameCheck(a.name) : null;
+  return { id: a.id, look: a.look.slice(), nick: a.nick.slice(), name: nc && nc.ok ? nc.name : '', mode: a.mode === 1 ? 1 : 0,
+           seed: Number.isInteger(a.seed) && a.seed >= 0 ? a.seed : 0, x: a.x, z: a.z, h: Number.isFinite(a.h) ? a.h : 0, t: Number.isFinite(a.t) ? a.t : 0 };
+}
+function avLoad() { try { const v = JSON.parse(store('airfaro.avatars') || '[]'); AV.mine = (Array.isArray(v) ? v : []).filter(avValid).slice(0, AV.MAX).map(avNorm); } catch (e) { AV.mine = []; } }
+function avSave() { store('airfaro.avatars', JSON.stringify(AV.mine.map(({ id, look, nick, name, mode, seed, x, z, h, t }) => ({ id, look, nick, name, mode, seed, x, z, h, t })))); }
 function avRandom() { return { look: AVD.AVATAR.LIMITS.map((n) => randInt(n)), nick: [randInt(AVD.AVATAR.adj.length), randInt(AVD.AVATAR.noun.length)] }; }
-// 지도에 보낼 목록: 다른 방문자 캐릭터 + 내 캐릭터 (내 것은 이 브라우저에 둔 자리가 기준이에요)
+const avName = (a) => AVD.avatarName(a);
+// 지도에 보낼 목록: 다른 방문자 캐릭터 + 내 캐릭터 (내 것은 이 브라우저에 둔 값이 기준이에요)
 function avPush() {
   if (!map || !AVD) return;
   const mineIds = new Set(AV.mine.map((a) => a.id));
-  map.setAvatars(AV.others.filter((a) => !mineIds.has(a.id)).map((a) => ({ key: a.id, look: a.look, nick: AVD.nickName(a.nick), x: a.x, z: a.z, h: a.h, mine: false }))
-    .concat(AV.mine.map((a) => ({ key: a.id, look: a.look, nick: AVD.nickName(a.nick), x: a.x, z: a.z, h: a.h, mine: true }))));
+  const row = (a, mine) => ({ key: a.id, look: a.look, nick: avName(a), mode: a.mode, seed: a.seed, x: a.x, z: a.z, h: a.h, mine });
+  map.setAvatars(AV.others.filter((a) => !mineIds.has(a.id)).map((a) => row(a, false)).concat(AV.mine.map((a) => row(a, true))));
 }
-async function avCall(body) {
+async function avCall(body, keepalive) {
   let res, j = null;
-  try { res = await fetch(AV_FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, owner: AV.owner }) }); }
+  try { res = await fetch(AV_FN, { method: 'POST', keepalive: !!keepalive, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, owner: AV.owner }) }); }
   catch (e) { const err = new Error(AV_TEXT.net); err.status = 0; throw err; }
   try { j = await res.json(); } catch (e) { j = null; }
   if (!res.ok || !j || !j.ok) { const err = new Error((j && j.error) || AV_TEXT.net); err.status = res.status; err.code = j && j.code; throw err; }
   return j;
 }
+// 서버에 저장 (name: '' = 낱말 이름으로)
+const avPut = (a, id, keepalive) => avCall({ op: 'put', id: id === undefined ? a.id : id, look: a.look, nick: a.nick, name: a.name || '', mode: a.mode, seed: a.seed, x: a.x, z: a.z, h: a.h }, keepalive);
 let avFetchSeq = 0;
 async function avFetchAll() {
   if (!AV.shared || !AVD) return;
@@ -555,23 +595,37 @@ async function avFetchAll() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const list = await res.json();
     if (my !== avFetchSeq) return;
-    AV.others = (Array.isArray(list) ? list : []).filter(avValid).map(({ id, look, nick, x, z, h }) => ({ id, look, nick, x, z, h: Number.isFinite(h) ? h : 0 }));
+    AV.others = (Array.isArray(list) ? list : []).filter(avValid).map(avNorm);
     AV.loaded = true;
   } catch (e) { /* 다음 번에 다시 읽어요 */ }
   avPush();
 }
-// 공개 지도: 들어올 때 내 캐릭터가 서버에 있는지 보고, 없거나 하루 넘게 지났으면 다시 저장해요 (7일 동안 안 오면 서버에서 사라져요)
+// 공개 지도: 들어올 때 서버에 있는 내 캐릭터를 다시 불러와요 (이 브라우저에 둔 목록이 지워졌어도 주인 표로 찾아요).
+//   하루 넘게 지난 것은 다시 저장해요 (7일 동안 안 오면 서버에서 사라져요). 서버에 없으면:
+//   7일이 지났으면 서버가 지운 것이라 다시 세우고, 7일이 안 됐으면 같은 열쇠를 쓰는 다른 기기에서 지운 것이라 이 브라우저에서도 지워요
 async function avSyncMine() {
+  let srv = null;
+  try { const j = await avCall({ op: 'mine' }); if (Array.isArray(j.list)) srv = j.list.filter(avValid).map(avNorm); } catch (e) { /* 옛 서버면 목록으로 봐요 */ }
   await avFetchAll();
-  if (!AV.loaded) return;
-  const ids = new Set(AV.others.map((a) => a.id));
+  if (!srv && !AV.loaded) { avWelcome(); return; }
   let changed = false;
+  if (srv) {
+    const ids = new Set(srv.map((a) => a.id)), keep = AV.mine.filter((a) => !ids.has(a.id));
+    const next = srv.concat(keep).slice(0, AV.MAX);
+    changed = JSON.stringify(next) !== JSON.stringify(AV.mine);
+    AV.mine = next;
+  }
+  const on = new Set((srv || AV.others).map((a) => a.id)), skew = map ? map.clock() : 0;
   for (const a of AV.mine.slice()) {
-    if (ids.has(a.id) && Date.now() - (a.t || 0) < 86400e3) continue;
-    try { const j = await avCall({ op: 'put', id: a.id, look: a.look, nick: a.nick, x: a.x, z: a.z, h: a.h }); a.id = j.id; a.t = Date.now(); changed = true; }
+    const age = Date.now() + skew - (a.t || 0);
+    if (on.has(a.id) && age < 86400e3) continue;
+    if (srv && !on.has(a.id) && age < AV_KEEP_MS) { AV.mine = AV.mine.filter((m) => m !== a); changed = true; continue; }
+    try { const j = await avPut(a); a.id = j.id; a.t = Date.now() + skew; changed = true; }
     catch (e) { if (e.status === 403) { AV.mine = AV.mine.filter((m) => m !== a); changed = true; } }
   }
-  if (changed) { avSave(); avFetchAll(); avRender(); }
+  if (changed) { avSave(); avPush(); avFetchAll(); }
+  avRender();
+  avWelcome();
 }
 // ---- 미리 보기 그림 (앞에서 본 모습)
 function avSvg(look, cls) {
@@ -612,33 +666,56 @@ function avOptHtml(o, L) {
   }
   return `<div class="avopt" role="group" aria-label="${esc(o.label)}"${o.when && !o.when(L) ? ' hidden' : ''}><span>${esc(o.label)}</span><div class="sw">${b}</div></div>`;
 }
+// 이름 칸 아래 안내: 비었으면 낱말 이름을 쓴다는 말, 틀리면 까닭
+function avNameNote(e) {
+  const c = AVD.nameCheck(e.name || '');
+  if (!c.ok) return { ok: false, text: AVD.NAME_RULES.MSG[c.why] || AVD.NAME_RULES.MSG.type };
+  if (!c.name) return { ok: true, text: `비워 두면 ‘${AVD.nickName(e.nick)}’처럼 낱말로 지은 이름이 붙어요.` };
+  return { ok: true, text: `${AV.shared ? '' : '공개 지도에서는 '}모든 방문자에게 이 이름이 보여요. 개인 정보는 쓰지 말아 주세요.` };
+}
+function avWanderText(seed) {
+  const w = AVD.wanderParams(seed);
+  return `걸음 ${w.speed.toFixed(2).replace(/0$/, '')} m/s · 반경 ${w.radius} m · 쉬는 시간 ${w.pause}초 안팎 · 들르는 곳 ${w.stops}곳`;
+}
+const avKeyText = (k) => k.replace(/(.{8})(?=.)/g, '$1 ');
 function avRender() {
   const p = $('avPanel'); if (!p || !AVD) return;
-  const shared = AV.shared, A = AVD.AVATAR;
+  const shared = AV.shared;
   const msg = AV.msg ? `<p class="avmsg${AV.msgErr ? ' err' : ''}" role="status">${esc(AV.msg)}</p>` : '<p class="avmsg" role="status"></p>';
   let body = '';
   if (AV.view === 'edit' && AV.edit) {
-    const e = AV.edit, L = e.look;
-    const opt = (list, v) => list.map((w, k) => `<option value="${k}"${k === v ? ' selected' : ''}>${esc(w)}</option>`).join('');
+    const e = AV.edit, L = e.look, note = avNameNote(e);
+    const modeBtn = (v, t) => `<button type="button" class="t" data-mode="${v}" aria-pressed="${e.mode === v}">${t}</button>`;
     body = `<div class="aved">
-      <div class="top">${avSvg(L)}<div class="avopt"><span>이름</span><div class="avname">
-        <select id="avAdj" aria-label="이름 앞 꾸밈말">${opt(A.adj, e.nick[0])}</select><select id="avNoun" aria-label="이름">${opt(A.noun, e.nick[1])}</select></div>
-        <button type="button" data-act="rand">아무렇게나</button></div></div>
+      <div class="top">${avSvg(L)}<div class="avopt"><label for="avName">이름</label>
+        <input id="avName" type="text" maxlength="12" autocomplete="off" spellcheck="false" enterkeyhint="done" value="${esc(e.name || '')}" placeholder="${esc(AVD.nickName(e.nick))}" aria-describedby="avNameNote">
+        <p class="avnote${note.ok ? '' : ' err'}" id="avNameNote">${esc(note.text)}</p>
+        <div class="avbtns"><button type="button" data-act="nameRand">낱말로 짓기</button><button type="button" data-act="rand">생김새 아무렇게나</button></div></div></div>
+      <div class="avopt" role="group" aria-label="움직임"><span>움직임</span><div class="sw">${modeBtn(0, '내가 조종하기')}${modeBtn(1, '혼자 돌아다니기')}</div>
+        ${e.mode === 1 ? `<p class="avnote">무작위로 뽑은 값으로 세운 자리 둘레를 혼자 걸어 다녀요. <span id="avWander">${esc(avWanderText(e.seed))}</span></p><div class="avbtns"><button type="button" data-act="reroll">다시 뽑기</button></div>`
+          : '<p class="avnote">세운 자리에 서 있어요. 목록에서 ‘조종하기’를 누르면 땅을 눌러 걷게 하거나 방향키 · WASD 로 움직일 수 있어요.</p>'}</div>
       ${AV_OPTS().map((o) => avOptHtml(o, L)).join('')}
-      <div class="avbtns"><button type="button" class="on" data-act="${e.id ? 'saveLook' : 'place'}">${e.id ? '저장' : '지도에 세우기'}</button><button type="button" data-act="back">취소</button></div>
+      <div class="avbtns"><button type="button" class="on" data-act="${e.id ? 'saveLook' : 'place'}"${note.ok ? '' : ' disabled'}>${e.id ? '저장' : '지도에 세우기'}</button><button type="button" data-act="back">취소</button></div>
     </div>`;
   } else {
-    const rows = AV.mine.map((a) => `<div class="avrow" data-id="${esc(a.id)}">${avSvg(a.look)}<div><div class="nm">${esc(AVD.nickName(a.nick))}</div>
-      <div class="acts"><button type="button" data-act="view">보기</button><button type="button" data-act="move">옮기기</button><button type="button" data-act="edit">꾸미기</button>
+    const rows = AV.mine.map((a) => `<div class="avrow" data-id="${esc(a.id)}">${avSvg(a.look)}<div><div class="nm">${esc(avName(a))}</div>
+      <div class="md">${a.mode === 1 ? '혼자 돌아다녀요' : '내가 조종해요'}</div>
+      <div class="acts"><button type="button" data-act="find">찾기</button>${a.mode === 1 ? '' : '<button type="button" data-act="drive">조종하기</button>'}<button type="button" data-act="move">옮기기</button><button type="button" data-act="edit">꾸미기</button>
       <button type="button" data-act="del">${AV.confirmDel === a.id ? '정말 지울까요?' : '지우기'}</button></div></div></div>`).join('');
     const full = AV.mine.length >= AV.MAX;
-    body = `${rows ? `<div class="avlist">${rows}</div>` : '<p class="small">아직 만든 캐릭터가 없어요. 꾸민 다음 지도에 세워 두면 옆을 지나가는 학생들을 가까이서 볼 수 있어요.</p>'}
+    body = `${rows ? `<div class="avlist">${rows}</div>` : '<p class="small">아직 만든 캐릭터가 없어요. 꾸미고 이름을 지어 지도에 세우면, 내가 조종하거나 혼자 돌아다니게 할 수 있어요.</p>'}
       <div class="avbtns"><button type="button" class="on" data-act="new"${full ? ' disabled' : ''}>새 캐릭터 만들기</button></div>
-      ${full ? '<p class="small">캐릭터는 한 브라우저에 3개까지 만들 수 있어요.</p>' : ''}`;
+      ${full ? '<p class="small">캐릭터는 한 브라우저에 3개까지 만들 수 있어요.</p>' : ''}
+      ${shared ? `<details class="avkey"${AV.keyOpen ? ' open' : ''}><summary>다른 기기에서 내 캐릭터 찾기</summary>
+        <p class="small">이 브라우저가 기억하는 ‘캐릭터 열쇠’예요. 다른 기기에서 이 열쇠를 넣으면 그 기기에서도 내 캐릭터를 조종하고 꾸밀 수 있어요. 열쇠를 아는 사람은 누구나 내 캐릭터를 바꿀 수 있으니 남에게 알려 주지 마세요.</p>
+        <div class="avname"><code id="avKeyText">${esc(avKeyText(AV.owner))}</code><button type="button" data-act="keyCopy">열쇠 복사</button></div>
+        <div class="avname"><input id="avKeyIn" type="text" maxlength="48" autocomplete="off" spellcheck="false" placeholder="다른 기기의 열쇠 32자리" aria-label="다른 기기의 캐릭터 열쇠"><button type="button" data-act="keyUse">${AV.keyAsk ? '정말 바꿀까요?' : '열쇠 넣기'}</button></div>
+        ${AV.keyAsk && AV.mine.length ? '<p class="small">지금 이 브라우저의 캐릭터는 지금 열쇠로만 바꿀 수 있어요. 바꾸기 전에 위의 열쇠를 복사해 두세요.</p>' : ''}
+      </details>` : ''}`;
   }
   p.innerHTML = `<div class="avp-head"><h3 id="avTitle">내 캐릭터</h3><span class="small">${AV.mine.length}/${AV.MAX}</span><button type="button" data-act="close">닫기</button></div>
     ${body}${msg}
-    <p class="small">${shared ? '모든 방문자에게 보여요. 7일 동안 다시 오지 않으면 사라져요.' : '이 브라우저에만 보여요. 공개 지도에서 만들면 모든 방문자에게 보여요.'} 이름은 정해 둔 낱말을 골라 붙여요. 꾸밈용 캐릭터라 실제 사람의 위치가 아니에요.</p>`;
+    <p class="small">${shared ? '모든 방문자에게 보여요. 7일 동안 다시 오지 않으면 사라져요.' : '이 브라우저에만 보여요. 공개 지도에서 만들면 모든 방문자에게 보여요.'} 꾸밈용 캐릭터라 실제 사람의 위치가 아니에요.</p>`;
 }
 function avSay(text, err) { AV.msg = text || ''; AV.msgErr = !!err; avRender(); }
 function avOpen(on) {
@@ -647,71 +724,159 @@ function avOpen(on) {
   if (on) { avRender(); const f = p.querySelector('button.on:not([disabled]), button'); if (f) f.focus(); }
 }
 // 창 닫기 (닫기 단추 · Esc · 내 캐릭터 단추). 다음에 열면 목록부터 보여요
-function avClose() { AV.view = 'list'; AV.edit = null; AV.confirmDel = null; AV.msg = ''; avOpen(false); $('btnAvatar').focus(); }
-// 지도 위 알림 줄: 세울 자리를 고르는 동안은 '그만두기', 세운 뒤 알림은 '닫기' (7초 뒤 저절로 닫혀요)
-let avToastT = 0;
-function avHint(text, toast) {
+function avClose() { AV.view = 'list'; AV.edit = null; AV.confirmDel = null; AV.keyAsk = false; AV.msg = ''; avOpen(false); $('btnAvatar').focus(); }
+// 지도 위 알림 줄. kind: 'placing' (세울 자리 고르는 중 · 그만두기), 'drive' (조종 중 · 그만), 'toast' (알림 · 닫기, 저절로 닫혀요)
+//   go = { label, fn } 이면 단추를 하나 더 보여요 (예: 찾기 · 다음)
+let avToastT = 0, avGoFn = null;
+function avHint(text, kind, go, ms) {
   const h = $('avHint'); if (!h) return;
+  if (kind === true) kind = 'toast'; else if (!kind) kind = 'placing';
   clearTimeout(avToastT);
   h.hidden = !text; if (!text) return;
   $('avHintText').textContent = text;
-  $('avStop').textContent = toast ? '닫기' : '그만두기';
-  h.dataset.mode = toast ? 'toast' : 'placing';
-  if (toast) avToastT = setTimeout(() => { h.hidden = true; }, 7000);
+  $('avStop').textContent = kind === 'toast' ? '닫기' : kind === 'drive' ? '조종 그만' : '그만두기';
+  const g = $('avGo'); avGoFn = go ? go.fn : null; g.hidden = !go; if (go) g.textContent = go.label;
+  h.dataset.mode = kind;
+  if (kind === 'toast') avToastT = setTimeout(() => { h.hidden = true; }, ms || 7000);
 }
 const avNarrow = () => ($('view3d').clientWidth || 0) < 760;   // 좁은 화면에서는 창이 캐릭터를 가려요
-const avLook = (a) => map && map.viewClear(a.x, a.z, 30, 0.95, a.h);
-// 땅을 눌러 세우기 (새로 만들기 · 옮기기)
-function avPlace(look, nick, id) {
+const avTouch = () => matchMedia('(pointer: coarse)').matches;
+// 찾기: 가까이 가서 보고 화살표로 9초 동안 표시해요. 여러 개면 누를 때마다 다음 캐릭터로
+function avFind(a) {
+  if (!map || !a) return;
+  if (avNarrow()) avOpen(false);
+  map.findAvatar(a.id);
+  const k = AV.mine.indexOf(a), more = AV.mine.length > 1;
+  AV.findAt = k;
+  avHint(`‘${avName(a)}’ 여기 있어요.${a.mode === 1 ? ' 혼자 돌아다니는 중이라 사진기가 따라가요.' : ''}`, 'toast', more ? { label: '다음 캐릭터', fn: () => avFind(AV.mine[(k + 1) % AV.mine.length]) } : null, 9000);
+}
+// 다시 들어왔을 때: 내 캐릭터가 지도에 있으면 알려 주고 찾기 단추를 보여요 (한 번만)
+function avWelcome() {
+  if (AV.welcomed || !AV.mine.length || !map) return;
+  AV.welcomed = true;
+  if (map.isPlacing() || map.driving()) return;
+  const n = AV.mine.length;
+  avHint(n === 1 ? `내 캐릭터 ‘${avName(AV.mine[0])}’가 지도에 있어요.` : `내 캐릭터 ${n}명이 지도에 있어요.`, 'toast', { label: '찾기', fn: () => avFind(AV.mine[0]) }, 12000);
+}
+// 땅을 눌러 세우기 (새로 만들기 · 옮기기). rec = { look, nick, name, mode, seed }
+function avPlace(rec0, id) {
   if (!map) return;
   if (editing) setEditing(false);
+  if (map.driving()) map.driveStop();
   $('avPanel').hidden = true; AV.msg = '';
-  avHint(id ? '옮길 자리를 누르세요' : '캐릭터를 세울 땅을 누르세요');
-  map.startPlacing(look, id, async (r) => {
+  avHint(id ? '옮길 자리를 누르세요' : rec0.mode === 1 ? '돌아다닐 곳의 가운데 땅을 누르세요' : '캐릭터를 세울 땅을 누르세요');
+  map.startPlacing(rec0.look, id, async (r) => {
     if (!r.ok) {
       if (r.why === 'cancel') { avHint(''); avOpen(true); return; }
       avHint(AV_TEXT[r.why] || '여기에는 세울 수 없어요.'); return;   // 다른 곳을 다시 누를 수 있어요
     }
-    const rec = { id, look: look.slice(), nick: nick.slice(), x: r.x, z: r.z, h: r.h };
+    // 자리는 서버처럼 cm 까지만 (혼자 돌아다니는 길은 이 값으로 정해져요. 주인과 다른 방문자가 같은 길을 보려면 같은 값이어야 해요)
+    const rec = { id, look: rec0.look.slice(), nick: rec0.nick.slice(), name: rec0.name || '', mode: rec0.mode === 1 ? 1 : 0, seed: rec0.seed || 0, x: avCm(r.x), z: avCm(r.z), h: avCm(r.h) };
     try {
-      if (AV.shared) { avHint('저장하는 중이에요…', true); const j = await avCall({ op: 'put', id: id || null, look: rec.look, nick: rec.nick, x: rec.x, z: rec.z, h: rec.h }); rec.id = j.id; }
+      if (AV.shared) { avHint('저장하는 중이에요…', true); const j = await avPut(rec, id || null); rec.id = j.id; }
       else if (!rec.id) rec.id = 'local-' + Date.now().toString(36) + randInt(1e6).toString(36);
-      rec.t = Date.now();
+      rec.t = Date.now() + (map ? map.clock() : 0);
       const k = AV.mine.findIndex((a) => a.id === id);
       if (id && k >= 0) AV.mine[k] = rec; else AV.mine.push(rec);
       avSave(); avPush(); AV.view = 'list'; AV.edit = null; AV.msg = '';
-      avLook(rec);
-      avHint(id ? '옮겼어요.' : '세웠어요. 옆을 지나가는 학생들을 구경해 보세요.', true);
+      map.findAvatar(rec.id);
+      avHint(id ? '옮겼어요.' : rec.mode === 1 ? '세웠어요. 이제 이 둘레를 혼자 돌아다녀요.' : '세웠어요. 목록에서 ‘조종하기’를 누르면 움직일 수 있어요.', true);
       if (AV.shared) avFetchAll();
     } catch (e) { avHint(''); avOpen(true); avSay(e.message || AV_TEXT.net, true); }
   });
 }
+// ---- 조종하기: 멈춘 자리를 이 브라우저에는 바로, 서버에는 15초에 한 번까지 저장해요 (창을 닫을 때도 남은 것을 보내요)
+let avSaveT = 0, avLastSave = 0;
+function avQueueSave(a) {
+  a.dirty = true; a.t = Date.now() + (map ? map.clock() : 0); avSave();
+  if (!AV.shared) { a.dirty = false; return; }
+  clearTimeout(avSaveT);
+  avSaveT = setTimeout(avFlush, Math.max(0, avLastSave + AV_SAVE_GAP - Date.now()));
+}
+async function avFlush(keepalive) {
+  clearTimeout(avSaveT);
+  for (const a of AV.mine) {
+    if (!a.dirty) continue;
+    a.dirty = false; avLastSave = Date.now();
+    try { await avPut(a, a.id, keepalive); }
+    catch (e) { if (e.status === 429 || e.status === 0) { a.dirty = true; if (!keepalive) avSaveT = setTimeout(avFlush, AV_SAVE_GAP * 2); } }
+  }
+}
+function avDriveText(a) {
+  return `‘${avName(a)}’ 조종 중이에요. ${avTouch() ? '가고 싶은 땅을 누르세요.' : '땅을 누르면 걸어가요. 방향키 · WASD 로도 움직이고, Shift 를 누르면 뛰어요.'}`;
+}
+function avDrive(a) {
+  if (!map || !a) return;
+  if (editing) setEditing(false);
+  if (map.isPlacing()) map.cancelPlacing();
+  $('avPanel').hidden = true; $('btnAvatar').setAttribute('aria-expanded', 'false'); $('btnAvatar').classList.remove('on');
+  map.findAvatar(a.id, { dist: 44, phi: 0.72 });   // 조종할 때는 조금 더 위에서 봐요 (나무에 덜 가려요)
+  const ok = map.driveStart(a.id, (ev) => {
+    if (ev.type === 'stop') { const m = AV.mine.find((q) => q.id === ev.key); if (m) { m.x = ev.x; m.z = ev.z; m.h = ev.h; avQueueSave(m); } }
+    else if (ev.type === 'blocked') avHint(AV_GO[ev.why] || AV_TEXT[ev.why] || '그곳으로는 갈 수 없어요.', 'drive');
+    else if (ev.type === 'go') avHint(avDriveText(a), 'drive');
+    else if (ev.type === 'end') { avHint(''); if (AV.shared) avFlush(); }
+  });
+  if (ok) avHint(avDriveText(a), 'drive');
+}
 async function avAction(act, id, btn) {
   const a = AV.mine.find((m) => m.id === id);
   if (act === 'close') { avClose(); return; }
-  if (act === 'new') { if (AV.mine.length >= AV.MAX) return; const r = avRandom(); AV.edit = { id: null, look: r.look, nick: r.nick }; AV.view = 'edit'; AV.msg = ''; avRender(); return; }
-  if (act === 'rand' && AV.edit) { const r = avRandom(); AV.edit.look = r.look; AV.edit.nick = r.nick; avRender(); return; }
+  if (act === 'new') { if (AV.mine.length >= AV.MAX) return; const r = avRandom(); AV.edit = { id: null, look: r.look, nick: r.nick, name: '', mode: 0, seed: avSeed() }; AV.view = 'edit'; AV.msg = ''; avRender(); return; }
+  if (act === 'rand' && AV.edit) { AV.edit.look = avRandom().look; avRender(); return; }
+  if (act === 'nameRand' && AV.edit) { AV.edit.nick = avRandom().nick; AV.edit.name = AVD.nickName(AV.edit.nick); avRender(); const f = $('avName'); if (f) f.focus(); return; }
+  if (act === 'reroll' && AV.edit) { AV.edit.seed = avSeed(); avRender(); const b = $('avPanel').querySelector('button[data-act="reroll"]'); if (b) b.focus(); return; }
   if (act === 'back') { AV.view = 'list'; AV.edit = null; avRender(); return; }
-  if (act === 'place' && AV.edit) { avPlace(AV.edit.look, AV.edit.nick, null); return; }
+  if ((act === 'place' || act === 'saveLook') && AV.edit) {
+    const c = AVD.nameCheck(AV.edit.name || '');
+    if (!c.ok) { avRender(); return; }
+    AV.edit.name = c.name;
+  }
+  if (act === 'place' && AV.edit) { avPlace(AV.edit, null); return; }
   if (act === 'saveLook' && AV.edit) {
     const cur = AV.mine.find((m) => m.id === AV.edit.id); if (!cur) return;
+    const next = { ...cur, look: AV.edit.look.slice(), nick: AV.edit.nick.slice(), name: AV.edit.name, mode: AV.edit.mode, seed: AV.edit.seed };
     try {
-      if (AV.shared) { const j = await avCall({ op: 'put', id: cur.id, look: AV.edit.look, nick: AV.edit.nick, x: cur.x, z: cur.z, h: cur.h }); cur.id = j.id; }
-      cur.look = AV.edit.look.slice(); cur.nick = AV.edit.nick.slice(); cur.t = Date.now();
+      if (AV.shared) { const j = await avPut(next); next.id = j.id; }
+      next.t = Date.now() + (map ? map.clock() : 0);
+      if (map.driving() === cur.id && next.mode === 1) map.driveStop();
+      Object.assign(cur, next);
       avSave(); avPush(); AV.view = 'list'; AV.edit = null; avSay('바꿨어요.');
       if (AV.shared) avFetchAll();
     } catch (e) { avSay(e.message || AV_TEXT.net, true); }
     return;
   }
+  if (act === 'keyCopy') {
+    try { await navigator.clipboard.writeText(AV.owner); avSay('열쇠를 복사했어요. 다른 기기의 ‘열쇠 넣기’ 칸에 붙여 넣으세요.'); }
+    catch (e) { const t = $('avKeyText'); if (t) { const r = document.createRange(); r.selectNodeContents(t); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } avSay('열쇠를 골라 두었어요. 복사해서 쓰세요.'); }
+    return;
+  }
+  if (act === 'keyUse') {
+    AV.keyOpen = true;
+    const raw = ($('avKeyIn') || {}).value || '', k = raw.toLowerCase().replace(/[\s-]/g, '');
+    if (!/^[0-9a-f]{32}$/.test(k)) { avSay('열쇠는 0~9 와 a~f 로 된 32자리예요.', true); return; }
+    if (k === AV.owner) { avSay('지금 쓰는 열쇠와 같아요.'); return; }
+    if (AV.mine.length && !AV.keyAsk) { AV.keyAsk = true; avRender(); const f = $('avKeyIn'); if (f) f.value = raw; return; }
+    AV.keyAsk = false;
+    if (map.driving()) map.driveStop();
+    await avFlush();
+    store('airfaro.owner', k); AV.owner = k; AV.mine = []; avSave(); avPush();
+    AV.welcomed = false;
+    await avSyncMine();
+    avSay(AV.mine.length ? `열쇠를 바꿨어요. 내 캐릭터 ${AV.mine.length}개를 찾았어요.` : '열쇠를 바꿨어요. 이 열쇠로 만든 캐릭터는 아직 없어요.');
+    return;
+  }
   if (!a) return;
-  if (act === 'view') { avLook(a); if (avNarrow()) avOpen(false); return; }
-  if (act === 'move') { avPlace(a.look, a.nick, a.id); return; }
-  if (act === 'edit') { AV.edit = { id: a.id, look: a.look.slice(), nick: a.nick.slice() }; AV.view = 'edit'; AV.msg = ''; avRender(); return; }
+  if (act === 'find') { avFind(a); return; }
+  if (act === 'drive') { avDrive(a); return; }
+  if (act === 'move') { avPlace(a, a.id); return; }
+  if (act === 'edit') { AV.edit = { id: a.id, look: a.look.slice(), nick: a.nick.slice(), name: a.name || '', mode: a.mode, seed: a.seed || avSeed() }; AV.view = 'edit'; AV.msg = ''; avRender(); return; }
   if (act === 'del') {
     if (AV.confirmDel !== a.id) { AV.confirmDel = a.id; avRender(); setTimeout(() => { if (AV.confirmDel === a.id) { AV.confirmDel = null; avRender(); } }, 4000); return; }
     AV.confirmDel = null;
     try { if (AV.shared) await avCall({ op: 'del', id: a.id }); }
     catch (e) { if (e.status !== 404) { avSay(e.message || AV_TEXT.net, true); return; } }
+    if (map.driving() === a.id) map.driveStop();
     AV.mine = AV.mine.filter((m) => m !== a); avSave(); avPush(); avSay('지웠어요.');
     if (AV.shared) avFetchAll();
   }
@@ -721,23 +886,39 @@ function avInit() {
   if (!AVD || !map || !p) { if ($('btnAvatar')) $('btnAvatar').hidden = true; return; }
   AV.owner = avOwner(); avLoad(); avPush();
   $('btnAvatar').onclick = () => { if (map.isPlacing()) map.cancelPlacing(); else if (p.hidden) avOpen(true); else avClose(); };
-  $('avStop').onclick = () => { if ($('avHint').dataset.mode === 'toast') avHint(''); else map.cancelPlacing(); };
+  $('avStop').onclick = () => { const m = $('avHint').dataset.mode; if (m === 'toast') avHint(''); else if (m === 'drive') map.driveStop(); else map.cancelPlacing(); };
+  $('avGo').onclick = () => { if (avGoFn) avGoFn(); };
   p.addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b || !p.contains(b) || b.disabled) return;
     if (b.dataset.i !== undefined && AV.edit) { AV.edit.look[+b.dataset.i] = +b.dataset.v; avRender(); const again = p.querySelector(`button[data-i="${b.dataset.i}"][data-v="${b.dataset.v}"]`); if (again) again.focus(); return; }
+    if (b.dataset.mode !== undefined && AV.edit) { AV.edit.mode = +b.dataset.mode; avRender(); const again = p.querySelector(`button[data-mode="${b.dataset.mode}"]`); if (again) again.focus(); return; }
     const row = b.closest('.avrow');
     avAction(b.dataset.act, row ? row.dataset.id : null, b);
   });
-  p.addEventListener('change', (e) => {
-    if (!AV.edit) return;
-    if (e.target.id === 'avAdj') AV.edit.nick[0] = +e.target.value;
-    if (e.target.id === 'avNoun') AV.edit.nick[1] = +e.target.value;
+  // 이름 칸: 글자를 칠 때마다 안내와 저장 단추만 바꿔요 (창 전체를 다시 그리면 입력하던 칸을 놓쳐요)
+  p.addEventListener('input', (e) => {
+    if (e.target.id !== 'avName' || !AV.edit) return;
+    AV.edit.name = e.target.value;
+    const n = avNameNote(AV.edit), el = $('avNameNote'), go = p.querySelector('button[data-act="place"], button[data-act="saveLook"]');
+    if (el) { el.textContent = n.text; el.classList.toggle('err', !n.ok); }
+    if (go) go.disabled = !n.ok;
   });
+  p.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.isComposing) return;
+    if (e.target.id === 'avKeyIn') { e.preventDefault(); avAction('keyUse'); }
+    if (e.target.id === 'avName') { e.preventDefault(); const go = p.querySelector('button[data-act="place"], button[data-act="saveLook"]'); if (go && !go.disabled) go.click(); }
+  });
+  p.addEventListener('toggle', (e) => { if (e.target.classList && e.target.classList.contains('avkey')) AV.keyOpen = e.target.open; }, true);
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (map.isPlacing()) map.cancelPlacing(); else if (!p.hidden) avClose();
+    if (map.driving()) map.driveStop(); else if (map.isPlacing()) map.cancelPlacing(); else if (!p.hidden) avClose();
   });
+  // 창을 닫거나 다른 탭으로 갈 때 아직 안 보낸 자리를 보내요
+  const flushNow = () => { if (AV.shared && AV.mine.some((a) => a.dirty)) avFlush(true); };
+  addEventListener('pagehide', flushNow);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flushNow(); });
   if (AV.shared) { avSyncMine(); setInterval(() => { if (!document.hidden) avFetchAll(); }, 20000); }
+  else avWelcome();
 }
 
 // ---------------------------------------------------------------- 그리기
