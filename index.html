@@ -193,6 +193,74 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
           padding: 6px 8px 6px 14px; border-radius: 18px; background: var(--ink); color: var(--panel); font-weight: 700; font-size: 13px;
           box-shadow: 0 4px 14px rgba(0, 0, 0, .3); width: max-content; max-width: calc(100% - 20px); text-align: center; }
 .avhint button { padding: 4px 10px; font-size: 12.5px; }
+/* 2026-11-12: 누적 순위 · 번호 표시 · 지도 위 지점 카드 */
+.jump { font-size: 13px; padding: 4px 13px; border-radius: 999px; background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.rank-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 6px; }
+.rank-head h2 { margin: 0; flex: 1 1 auto; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; padding: 4px 10px; font-size: 12.5px; }
+.site-row { grid-template-columns: auto minmax(0, 1fr) auto auto; row-gap: 4px; }
+.site-row .cnt { font-family: var(--f-num); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.site-row .bar { grid-column: 2 / -1; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.site-row .bar i { display: block; height: 100%; background: var(--s-smoke); border-radius: 3px; }
+.num.big { width: 26px; height: 26px; font-size: 13.5px; }
+.cum { margin-top: 10px; padding: 9px 11px; background: var(--bg); border-radius: 8px; }
+.cum h2 { margin-bottom: 4px; }
+.cum-top { display: flex; flex-wrap: wrap; gap: 2px 16px; align-items: baseline; font-size: 13px; }
+.cum-top b { font-family: var(--f-num); font-size: 19px; font-variant-numeric: tabular-nums; }
+.days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; height: 96px; margin-top: 6px; }
+.day { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; text-align: center; font-size: 11px; color: var(--muted); font-family: var(--f-num); min-width: 0; }
+.day .col { display: flex; align-items: flex-end; justify-content: center; }
+.day .col i { width: 68%; min-height: 2px; background: var(--s-smoke); border-radius: 3px 3px 0 0; opacity: .6; }
+.day.today { color: var(--ink); font-weight: 600; }
+.day.today .col i { opacity: 1; }
+.mapcard { position: absolute; left: 10px; bottom: 10px; z-index: 5; width: min(320px, calc(100% - 20px)); background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+           border-left: 6px solid var(--c); border-radius: 10px; padding: 8px 10px 9px 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, .28); font-size: 13px; display: grid; gap: 4px; }
+.mc-h { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mc-h b.t { font-size: 15px; flex: 1 1 auto; min-width: 0; }
+.mc-x { border: 0; padding: 0 6px; font-size: 18px; line-height: 1; background: transparent; color: var(--muted); }
+.mapcard .n { font-family: var(--f-num); font-weight: 600; }
+.avpanel:not([hidden]) ~ .mapcard { display: none; }
+.mapcard .more { justify-self: start; padding: 3px 10px; font-size: 12.5px; }
+.m3-sl b { width: 26px; height: 26px; font-size: 13.5px; }
+.m3-sl:not(.sel) { padding: 2px; gap: 0; }
+.no-bl .m3-bl:not(.m3-place) { display: none !important; }
+/* 2026-11-13: 시간대 분포 · 순찰 추천 */
+main.grid { padding-bottom: 14px; }
+.lower { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding-bottom: 14px; align-items: start; }
+@media (max-width: 960px) { .lower { grid-template-columns: minmax(0, 1fr); } }
+button.day { border: 0; background: transparent; padding: 2px 0; border-radius: 6px; font-weight: 400; cursor: pointer; }
+button.day:hover { background: var(--accent-soft); }
+button.day.on { background: var(--accent-soft); outline: 2px solid var(--accent); color: var(--ink); font-weight: 700; }
+button.day.on .col i { opacity: 1; }
+.hours { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 2px; height: 92px; margin-top: 4px; }
+.hr { display: grid; grid-template-rows: minmax(0, 1fr) 15px; font: 10px/15px var(--f-num); color: var(--muted); text-align: center; min-width: 0; white-space: nowrap; }
+.hr .col { display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--line); }
+.hr .col i { width: 82%; background: var(--s-smoke); opacity: .5; border-radius: 2px 2px 0 0; }
+.hr.hot .col i { opacity: 1; }
+.hr.hot { color: var(--ink); font-weight: 600; }
+.cumsub { margin: 10px 0 0; }
+/* 누적 기록 칸은 글자를 크고 진하게 (작은 화면에서도 읽히게) */
+#cumCard h2 { font-size: 14px; color: var(--ink); }
+#cumCard .small, #cumCard .chart-l { font-size: 13.5px; color: var(--ink); }
+#cumCard .cum-top { font-size: 14.5px; }
+#cumCard .days { height: 132px; }
+#cumCard .day { font-size: 13.5px; color: var(--ink); }
+#cumCard .day > span:first-child { font-size: 15px; font-weight: 600; }
+#cumCard .hours { height: 128px; }
+#cumCard .hr { grid-template-rows: minmax(0, 1fr) 20px; font: 600 12.5px/20px var(--f-num); color: var(--ink); }
+#cumCard .hr .col { flex-direction: column; align-items: center; justify-content: flex-end; }
+#cumCard .hr .col em { font: 600 12.5px/16px var(--f-num); color: var(--ink); }
+.reco { display: grid; gap: 4px; }
+.reco-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 10px; align-items: center; padding: 7px 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+.reco-row:hover { background: var(--accent-soft); }
+.reco-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.reco-row .rk { font-family: var(--f-num); font-weight: 600; color: var(--accent); }
+.reco-row .when { font-family: var(--f-num); font-weight: 600; font-size: 16px; white-space: nowrap; }
+.reco-row .where { font-weight: 700; display: inline-block; }
+.reco-row .when { display: inline-block; margin-right: 4px; }
+.reco-row .cnt { grid-column: 2; }
+.reco-row .cnt { font-family: var(--f-num); font-size: 12.5px; color: var(--muted); white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -200,16 +268,18 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
 <header class="top wrap">
   <h1 class="logo">AIRFARO <b>MAP</b></h1>
   <span class="campus" id="campusName">동국대학교 서울캠퍼스 (시범)</span>
+  <button id="btnJump" type="button" class="jump">누적 기록 보기</button>
   <span class="modechip example" id="modeChip">예시 모드</span>
 </header>
 <div class="summary wrap" id="summary"></div>
 <main class="grid wrap">
   <div class="mapbox" id="mapbox">
     <div class="mapbar">
-      <span class="hint">끌어서 옮기고, 오른쪽 버튼이나 Ctrl을 누른 채 끌면 돌아가요. 확대는 휠로 해요. 휴대폰에서는 두 손가락으로 돌리거나 벌려요. 기둥은 공기 변화를 재는 <b>센서 위치</b>이고, 흡연한 사람의 위치가 아니에요.</span>
+      <span class="hint"><b>번호는 흡연 의심 누적이 많은 순서예요. 번호를 누르면 어디인지와 기록이 보여요.</b> 지도는 끌어서 옮기고, 오른쪽 버튼이나 Ctrl을 누른 채 끌면 돌아가요. 휴대폰에서는 두 손가락으로 돌리거나 벌려요. 번호가 선 기둥은 <b>센서 위치</b>이고, 흡연한 사람의 위치가 아니에요.</span>
       <button id="btnHome" type="button">기본 보기</button>
       <button id="btnTop" type="button">위에서 보기</button>
       <button id="btnSpin" type="button">천천히 돌기</button>
+      <button id="btnNames" type="button" aria-pressed="false" title="건물 이름표를 켜고 꺼요">건물 이름</button>
       <button id="btnStudents" type="button" aria-pressed="false" title="길을 걷는 꾸밈용 학생 캐릭터를 켜고 꺼요">학생 캐릭터</button>
       <button id="btnAvatar" type="button" aria-expanded="false" aria-controls="avPanel" title="내 캐릭터를 꾸미고 이름을 지어 지도에 세워요. 조종하거나 혼자 돌아다니게 할 수 있어요">내 캐릭터</button>
       <button id="btnEdit" type="button">센서 위치 옮기기</button>
@@ -232,18 +302,37 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
   </div>
 
   <div class="side">
-    <section class="card" aria-labelledby="h-sites">
-      <h2 id="h-sites">센서 지점</h2>
+    <section class="card" id="rankCard" aria-labelledby="h-sites">
+      <div class="rank-head">
+        <h2 id="h-sites">흡연 의심 누적 순위</h2>
+        <div class="seg" role="group" aria-label="세는 기간"><button id="spanWeek" type="button">최근 7일</button><button id="spanToday" type="button">오늘</button></div>
+      </div>
       <div class="list" id="list"></div>
+      <p class="small" id="rankNote" style="margin:8px 0 0"></p>
     </section>
-    <section class="card" id="detail" aria-live="polite"></section>
+    <section class="card" id="recoCard" aria-labelledby="h-reco">
+      <h2 id="h-reco">순찰 추천 · 어디를 언제</h2>
+      <div class="reco" id="reco"></div>
+      <p class="small" id="recoNote" style="margin:8px 0 0"></p>
+    </section>
+  </div>
+</main>
+<div class="wrap lower">
+  <div class="side">
+    <section class="card" id="cumCard" aria-labelledby="h-cum">
+      <h2 id="h-cum">누적 기록 · 시간대 분포</h2>
+      <div id="cum"></div>
+    </section>
     <section class="card" aria-labelledby="h-ev">
-      <h2 id="h-ev">최근 바뀐 기록</h2>
+      <h2 id="h-ev">방금 바뀐 기록 (상태가 바뀔 때마다)</h2>
       <ul class="events" id="events"></ul>
       <p class="small" id="csvRow" hidden style="margin:8px 0 0"><a id="csvLink" href="api/export.csv" download>오늘 받은 값을 CSV로 내려받기</a><span id="csvNote"> (서버의 data/ 폴더에도 날짜별로 쌓여요)</span></p>
     </section>
   </div>
-</main>
+  <div class="side">
+    <section class="card" id="detail" aria-live="polite"></section>
+  </div>
+</div>
 <div class="wrap bottom">
   <section class="card">
     <h2>색이 뜻하는 것</h2>
@@ -253,13 +342,11 @@ textarea { width: 100%; font-family: var(--f-num); font-size: 11.5px; min-height
   <section class="card">
     <h2>이 지도를 읽을 때</h2>
     <ul class="notes">
-      <li>판단 규칙은 장치와 수집 페이지에 넣은 초기 시험값과 같아요. 평소보다 먼지가 50mV, 가스가 40 이상 함께 오른 채 10초 넘게 이어지면 흡연 의심으로 봐요. 담배 연기로 검증한 기준은 아니고, 아직 실물 검증 전이에요.</li>
-      <li>먼지 값은 센서 출력 <span class="nw">전압(mV)이고,</span> 가스 값은 0~1023 사이 숫자예요. 니코틴 양이나 확률, 정확한 <span class="nw">미세먼지(PM2.5)</span> 농도가 아니에요.</li>
-      <li>30초 넘게 값이 안 오면 회색 '수신 없음'으로 바꿔요. 값이 없을 때 초록으로 두지 않아요.</li>
-      <li>장치를 켜거나 다시 연결하면 4분 동안 '기준 측정 전'이에요. 3분은 가스 센서 예열, 1분은 평소 공기를 재는 시간이에요.</li>
+      <li>판단 규칙은 장치와 수집 페이지에 넣은 초기 시험값과 같아요. 평소보다 먼지가 50mV, 가스가 40 이상 함께 오른 채 10초 넘게 이어지면 흡연 의심으로 봐요. 담배 연기로 검증한 기준은 아니고, 아직 실물 검증 전이에요. 센서 값은 니코틴 양이나 흡연 확률이 아니에요.</li>
+      <li>누적 기록은 지점마다 '흡연 의심'으로 바뀐 횟수를 날짜별 · 시간대별로 센 것이고, 지도 번호와 목록은 이 횟수가 많은 순서예요. 예시 모드에서는 지난 6일 치와 오늘 화면을 열기 전 횟수를 지어낸 예시 숫자로 넣었어요. 실제 관측에서는 서버가 받은 최근 기록 100건 안에서 세요. 순찰 추천은 이 횟수로 고른 참고용 시간대이고, 센서가 꺼져 있던 때는 세지 못해요.</li>
       <li>대운동장은 실제처럼 평평한 축구장으로, 정각원과 종각은 기와지붕 전통 건물로 그린 모형이에요. 둘레 땅 높이는 모형에 맞춰 고른 값이라 실제와 조금 달라요.</li>
       <li>팔정도는 실제처럼 평평한 광장으로 그렸어요. 가운데 청동 불상과 화강암 틀, 어른 코끼리 둘과 새끼 하나로 된 석상은 사진을 보고 만들었어요. 명진관 돌벽과 탑, 신공학관 · 중앙도서관 · 정보문화관 · 다향관의 벽과 지붕 색도 사진을 보고 골랐고, 중앙도서관 · 원흥관 · 상록원 지붕에는 옥상 정원을 올렸어요. 그래도 모형이라 크기와 색, 창문 수는 실제와 달라요. 다른 건물은 지도에 있는 윤곽과 높이로 만들고 창문은 어림으로 넣었어요.</li>
-      <li>지도 위를 걷는 학생은 화면을 꾸미는 가상 캐릭터라서 실제 사람의 위치도, 냄새를 잰 값도 아니에요. 흡연 의심 센서 둘레에 들어가면 "아 담배 냄새!" 하며 코를 막고 피해 가요. 판단 보류나 공기 변화에는 반응하지 않고, 지도 위 '학생 캐릭터' 단추로 끌 수 있어요. 학생들이 주고받는 말은 미리 써 둔 문장에서 골라 보여 줘요.</li>
+      <li>지도 위를 걷는 학생은 화면을 꾸미는 가상 캐릭터라서 실제 사람의 위치도, 냄새를 잰 값도 아니에요. 흡연 의심 센서 둘레에 들어가면 "아 담배 냄새!" 하며 코를 막고 피해 가요. 판단 보류나 공기 변화에는 반응하지 않아요. 지도가 복잡해 보이지 않게 처음에는 꺼 두었고, 지도 위 '학생 캐릭터' 단추로 켜고 끌 수 있어요. 학생들이 주고받는 말은 미리 써 둔 문장에서 골라 보여 줘요.</li>
       <li>'내 캐릭터'로 만든 방문자 캐릭터도 꾸밈용이에요. 공개 지도에서는 모든 방문자에게 보이고, 노트북 화면과 미리 보기에서는 그 브라우저에만 보여요. 이름은 12자까지 직접 지을 수 있고, 욕설과 흡연 · 냄새에 관한 낱말, 긴 숫자는 화면과 서버에서 모두 막아요. 세운 캐릭터는 내가 조종하거나 혼자 돌아다니게 할 수 있어요. 혼자 다니는 길은 정해 둔 값으로 계산해서 누가 보든 같은 때 같은 자리에 있어요.</li>
     </ul>
   </section>
@@ -352,9 +439,69 @@ const SCEN = {   // C: 한 바퀴(초), at: 처음 열었을 때의 위치(초),
 };
 const clampLine = (r) => r && ({ dust: Math.max(0, Math.min(5000, Math.round(r.dust))), gas: Math.max(0, Math.min(1023, Math.round(r.gas))),
                                  humidity: r.humidity === null ? null : Math.round(r.humidity) });
-const EX = { sites: new Map(), t0: 0, cur: 0, timer: null, events: [] };
+const EX = { sites: new Map(), t0: 0, cur: 0, timer: null, events: [], smoke: {}, smokeH: {} };
+// 누적 기록(예시): 지점마다 '흡연 의심'으로 바뀐 횟수. 앞의 6칸은 6일 전~어제, 마지막 칸은 오늘 화면을 열기 전까지. 모두 지어낸 예시 숫자예요.
+const CUM_BASE = { 'site-01': [6, 4, 7, 5, 8, 6, 2], 'site-05': [3, 4, 2, 5, 3, 4, 1], 'site-04': [2, 1, 3, 2, 2, 3, 1],
+                   'site-03': [1, 2, 1, 0, 2, 1, 0], 'site-06': [0, 1, 0, 1, 1, 0, 0], 'site-02': [0, 0, 1, 0, 0, 0, 0] };
+// 시간대(0~23시) 예시: 지점마다 흡연 의심이 몰리는 시간대의 비중. 하루 횟수(CUM_BASE)를 이 비중대로 시간 칸에 나눠 담아요. 지어낸 숫자예요.
+const HOUR_W = { 'site-01': { 9: 1, 12: 5, 13: 4, 15: 2, 18: 3, 19: 1 }, 'site-05': { 11: 1, 14: 3, 15: 4, 16: 3, 19: 1 }, 'site-04': { 9: 2, 12: 4, 13: 3, 18: 1 },
+                 'site-03': { 13: 1, 18: 2, 19: 3, 20: 3, 21: 2 }, 'site-06': { 12: 3, 13: 2, 17: 1 }, 'site-02': { 12: 1, 15: 2, 16: 1 } };
+const kstHour = (ms) => new Date(ms + 9 * 3600e3).getUTCHours();
+let hourCache = { key: -1, v: {} };
+function baseHours(id) {   // [7일][24시간]. 오늘 칸은 화면을 연 시각보다 앞 시간에만 담아요
+  if (hourCache.key !== EX.t0) hourCache = { key: EX.t0, v: {} };
+  if (hourCache.v[id]) return hourCache.v[id];
+  const curH = kstHour(EX.t0 * 1000), W = HOUR_W[id] || { 12: 1 };
+  return (hourCache.v[id] = (CUM_BASE[id] || [0, 0, 0, 0, 0, 0, 0]).map((n, i) => {
+    const hrs = new Array(24).fill(0);
+    let ent = Object.entries(W).map(([h, w]) => [+h, w]);
+    if (i === 6) { ent = ent.filter(([h]) => h < curH); if (!ent.length) ent = [[Math.max(0, curH - 1), 1]]; }
+    const tot = ent.reduce((a, e) => a + e[1], 0);
+    for (let k = 0; k < n; k++) {
+      let r = (noise(id, 'd' + i + 'k' + k, 7) + 1) / 2 * tot, pick = ent[ent.length - 1][0];
+      for (const [h, w] of ent) { if (r < w) { pick = h; break; } r -= w; }
+      hrs[pick]++;
+    }
+    return hrs;
+  }));
+}
+// 2시간씩 묶었을 때 가장 많은 시간대
+function bestWindow(h24) { let n = 0, from = 0; for (let t = 0; t < 23; t++) { const v = h24[t] + h24[t + 1]; if (v > n) { n = v; from = t; } } return { from, to: from + 2, n }; }
+const sumHours = (H) => H[0].map((_, h) => H.reduce((a, d) => a + d[h], 0));
+const winText = (w) => `${w.from}~${w.to}시`;
+const kstDay = (ms) => Math.floor((ms + 9 * 3600e3) / 86400e3);
+function realHours(st, id) {
+  const today = kstDay(st.now), H = Array.from({ length: 7 }, () => new Array(24).fill(0));
+  for (const e of st.events || []) {
+    if (e.site !== id || e.to !== 'SMOKE' || !Number.isFinite(e.t)) continue;
+    const d = 6 - (today - kstDay(e.t));
+    if (d >= 0 && d <= 6) H[d][kstHour(e.t)]++;
+  }
+  return H;
+}
+// 받은 기록이 100건으로 꽉 찼는데 가장 오래된 기록이 7일 안이면, 그보다 앞의 흡연 의심은 빠져 있을 수 있어요
+function realPartial(st) { const ev = st.events || []; return ev.length >= 100 && kstDay(st.now) - kstDay(ev[0].t) < 7; }
+const isEx = () => mode !== 'real';
+let selDay = null;   // 시간대 분포에서 고른 날 (null = 7일 합계, 0 = 6일 전 … 6 = 오늘)
+let rankSpan = store('airfaro.span') === 'today' ? 'today' : 'week';
+let cardClosed = false;
+// 지점마다 누적 횟수를 붙이고 많은 순서로 줄 세워요. num = 순위 (지도 번호와 목록 번호가 같아요)
+function ranked(st) {
+  const real = st.mode === 'real';
+  const all = st.sites.concat(st.unplaced || []).map((x) => {
+    let days = null, hours = null, today, total;
+    if (real) hours = realHours(st, x.id);
+    else { hours = baseHours(x.id).map((r) => r.slice()); const lv = EX.smokeH[x.id] || {}; for (const h in lv) hours[6][h] += lv[h];
+           }
+    days = hours.map((r) => r.reduce((a, b) => a + b, 0)); today = days[6]; total = days.reduce((a, b) => a + b, 0);
+    return { ...x, cum: { days, hours, today, total, win: hours ? bestWindow(sumHours(hours)) : null, key: rankSpan === 'today' ? today : total } };
+  });
+  all.sort((a, b) => b.cum.key - a.cum.key || b.cum.total - a.cum.total || (a.id < b.id ? -1 : 1));
+  all.forEach((x, i) => { x.num = i + 1; });
+  return { ...st, sites: all.filter(placed), unplaced: all.filter((x) => !placed(x)), all };
+}
 function exampleStart() {
-  EX.sites.clear(); EX.events = [];
+  EX.sites.clear(); EX.events = []; EX.smoke = {}; EX.smokeH = {};
   EX.t0 = Math.floor(Date.now() / 2000) * 2;          // 2초 칸에 맞춰요 (초)
   for (const c of DEFAULT_SITES) {
     const sc = SCEN[c.id];
@@ -383,7 +530,7 @@ function exampleStep(t, quiet) {
   }
   return quiet;
 }
-function addExEvent(site, from, to, t) { EX.events.push({ site, from, to, t }); if (EX.events.length > 100) EX.events.shift(); }
+function addExEvent(site, from, to, t) { if (to === 'SMOKE') { EX.smoke[site] = (EX.smoke[site] || 0) + 1; const H = EX.smokeH[site] || (EX.smokeH[site] = {}), h = kstHour(t); H[h] = (H[h] || 0) + 1; } EX.events.push({ site, from, to, t }); if (EX.events.length > 100) EX.events.shift(); }
 function liveOf(J, last, n, hist, age) {
   return { state: age > RULE.NO_DATA_S ? 'NODATA' : J.state, age_s: Math.round(age), n_rx: n, last_at: last.t,
     dust: last.dust, gas: last.gas, humidity: last.humidity, phase: J.phase,
@@ -495,7 +642,8 @@ function currentStatus() {
 let map = null;
 // 학생 캐릭터(꾸밈용): 처음에는 켜 두고, 움직임 줄이기를 켠 기기에서는 꺼 둬요. 고른 값은 이 브라우저에 남겨요
 const reduceMotion = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
-function studentsWanted() { const v = store('airfaro.students'); return v === '1' ? true : v === '0' ? false : !reduceMotion(); }
+function studentsWanted() { return store('airfaro.students2') === '1'; }   // 지도가 복잡해 보인다는 의견이 있어서 처음에는 꺼 둬요
+function showNames() { const on = store('airfaro.names') === '1'; $('view3d').classList.toggle('no-bl', !on); $('btnNames').classList.toggle('on', on); $('btnNames').setAttribute('aria-pressed', String(on)); }
 function showStudents() { const b = $('btnStudents'), on = !!map && map.studentsOn(); b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); $('npcNote').hidden = !on; }
 // 그림 품질: 주소 끝에 ?quality=high 또는 ?quality=low 를 붙이면 그대로, 없으면 기기에 맞춰 골라요
 const QUALITY = (() => { try { const q = new URLSearchParams(location.search).get('quality'); return q === 'high' || q === 'low' ? q : null; } catch (e) { return null; } })();
@@ -508,13 +656,18 @@ function startMap() {
     if (!window.THREE || !window.THREE.OrbitControls) throw new Error('3D 지도를 그리는 three.js를 불러오지 못했어요. 인터넷 연결을 확인해 주세요');
     if (!window.CAMPUS) throw new Error('캠퍼스 자료 campus-data.js를 불러오지 못했어요');
     map = window.AirfaroMap3D.create(box, window.CAMPUS, { stateColors: HEX, stateNames: Object.fromEntries(Object.entries(STATES).map(([k, v]) => [k, v[0]])),
-                                                        night: isNight(), homeTarget: [-35, -5], homeDist: 520, quality: QUALITY, glCheck: GLCHECK, students: studentsWanted() });
+                                                        night: isNight(), homeTarget: [-35, -5], homeDist: 520, numbersOnly: true, quality: QUALITY, glCheck: GLCHECK, students: studentsWanted() });
   } catch (e) {
     $('btnStudents').hidden = true; $('npcNote').hidden = true;
     box.innerHTML = `<div class="nogl"><div><b>3D 지도를 그리지 못했어요.</b><br>${esc(e.message)}<br>아래 목록과 기록은 그대로 볼 수 있어요.</div></div>`;
     map = null; return;
   }
   map.onSelect = (id) => select(id, false);
+  const mc = document.createElement('div'); mc.className = 'mapcard'; mc.id = 'mapcard'; mc.hidden = true; box.appendChild(mc);
+  mc.addEventListener('click', (e) => {
+    if (e.target.closest('.mc-x')) { cardClosed = true; mc.hidden = true; }
+    else if (e.target.closest('.more')) $('cumCard').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+  });
   map.onMove = (id, x, z, zone, zoneName) => {
     const list = mode === 'real' && serverSites ? serverSites : null;
     if (list) { const c = list.find((s) => s.id === id); if (c) Object.assign(c, { x, z, zone }); }
@@ -923,8 +1076,8 @@ function avInit() {
 
 // ---------------------------------------------------------------- 그리기
 function refresh() {
-  const st = currentStatus();
-  drawSummary(st); drawList(st); drawDetail(st); drawEvents(st);
+  const st = ranked(currentStatus());
+  drawSummary(st); drawList(st); drawDetail(st); drawEvents(st); drawMapCard(st); drawReco(st); drawCum(st);
   if (map) {
     map.setSites(st.sites);
     map.setStates(Object.fromEntries(st.sites.map((s) => [s.id, s.live.state])));
@@ -947,20 +1100,80 @@ function drawSummary(st) {
   box.appendChild(t);
 }
 
+const spanWord = () => (rankSpan === 'today' ? '오늘' : '최근 7일');
+let listHtml = '';
 function drawList(st) {
-  const box = $('list'); box.textContent = '';
-  st.sites.concat(st.unplaced || []).forEach((s, i) => {
-    const row = document.createElement('div');
-    row.className = 'site-row' + (s.id === selected ? ' sel' : '');
-    row.tabIndex = 0; row.setAttribute('role', 'button');
+  const max = Math.max(1, ...st.all.map((s) => s.cum.key));
+  const html = st.all.map((s) => {
     const L = s.live;
-    row.innerHTML = `<span class="num" style="background:${HEX[L.state]}">${i + 1}</span>` +
-      `<span class="nm">${esc(s.name)}<small>${esc(s.id)}</small>${placed(s) ? '' : ' <small>(지도 위치 없음)</small>'}</span>` +
-      `<span class="chip${chipCls(L.state)}" style="background:${HEX[L.state]}">${STATES[L.state][0]}</span>`;
-    row.onclick = () => select(s.id, true);
-    row.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(s.id, true); } };
-    box.appendChild(row);
-  });
+    return `<div class="site-row${s.id === selected ? ' sel' : ''}" tabindex="0" role="button" data-id="${esc(s.id)}" aria-label="${esc(s.num + '번 ' + s.name + ', ' + spanWord() + ' 흡연 의심 ' + s.cum.key + '회, 지금 ' + STATES[L.state][0])}">` +
+      `<span class="num big" style="background:${HEX[L.state]}">${s.num}</span>` +
+      `<span class="nm">${esc(s.name)}${placed(s) ? '' : ' <small>(지도 위치 없음)</small>'}</span>` +
+      `<span class="cnt">${s.cum.key}회</span>` +
+      `<span class="chip${chipCls(L.state)}" style="background:${HEX[L.state]}">${STATES[L.state][0]}</span>` +
+      `<span class="bar"><i style="width:${(100 * s.cum.key / max).toFixed(1)}%"></i></span></div>`;
+  }).join('');
+  if (html !== listHtml) { $('list').innerHTML = html; listHtml = html; }   // 같으면 다시 그리지 않아요 (누르는 중에 줄이 바뀌면 눌림이 사라져요)
+  $('spanWeek').classList.toggle('on', rankSpan === 'week'); $('spanToday').classList.toggle('on', rankSpan === 'today');
+  $('rankNote').textContent = mode === 'real'
+    ? `서버가 받은 기록에서 ${spanWord()} 동안 흡연 의심으로 바뀐 횟수예요${realPartial(st) ? ' (최근 100건 안에서 세어서 실제보다 적을 수 있어요)' : ''}. 지도 번호와 같고, 줄을 누르면 지도에서 그 자리로 가요.`
+    : `예시 숫자예요. ${spanWord()} 동안 흡연 의심으로 바뀐 횟수가 많은 순서이고, 지도 번호와 같아요. 줄을 누르면 지도에서 그 자리로 가요.`;
+}
+
+// 지도 위 카드: 번호를 누르면 어느 지점인지와 누적 횟수를 지도 안에서 바로 보여 줘요
+let cardHtml = '';
+function drawMapCard(st) {
+  const mc = $('mapcard'); if (!mc) return;
+  const s = st.all.find((x) => x.id === selected);
+  if (!s || cardClosed) { mc.hidden = true; return; }
+  const L = s.live;
+  const html = `<div class="mc-h"><span class="num big" style="background:${HEX[L.state]}">${s.num}</span><b class="t">${esc(s.name)}</b>` +
+    `<span class="chip${chipCls(L.state)}" style="background:${HEX[L.state]}">${STATES[L.state][0]}</span><button type="button" class="mc-x" aria-label="카드 닫기">×</button></div>` +
+    `<div class="small">${esc(s.place || '')}</div>` +
+    (s.cum.days ? `<div>최근 7일 흡연 의심 <span class="n">${s.cum.total}</span>회 · 오늘 <span class="n">${s.cum.today}</span>회${isEx() ? ' <span class="small">(예시)</span>' : ''}</div>` +
+                   (s.cum.win.n ? `<div>많았던 시간대 <span class="n">${winText(s.cum.win)}</span> <span class="small">(7일 동안 ${s.cum.win.n}회)</span></div>` : '')
+                : `<div>받은 기록 안에서 흡연 의심 <span class="n">${s.cum.total}</span>회</div>`) +
+    `<button type="button" class="more">시간대 분포 보기</button>`;
+  if (html !== cardHtml) { mc.innerHTML = html; cardHtml = html; }
+  mc.style.setProperty('--c', HEX[L.state]); mc.hidden = false;
+}
+
+// 순찰 추천: 지점마다 가장 많았던 2시간대를 고르고, 그 횟수가 많은 순서로 세 곳
+let recoHtml = '';
+function drawReco(st) {
+  const ok = st.all.length && st.all.every((s) => s.cum.hours);
+  $('recoCard').hidden = !ok; $('cumCard').hidden = !ok;
+  if (!ok) return;
+  $('h-reco').textContent = '순찰 추천 · 어디를 언제' + (isEx() ? ' (예시 숫자로 계산)' : ' (받은 기록으로 계산)');
+  $('h-cum').textContent = '누적 기록 · 시간대 분포' + (isEx() ? ' (예시 숫자)' : ' (받은 기록)');
+  const top = st.all.filter((s) => s.cum.win.n >= 2).sort((a, b) => b.cum.win.n - a.cum.win.n || a.num - b.num).slice(0, 3);
+  const html = top.map((s, i) => `<div class="reco-row" tabindex="0" role="button" data-id="${esc(s.id)}"><span class="rk">${i + 1}순위</span>` +
+    `<span><span class="when">${winText(s.cum.win)}</span> <span class="where">${esc(s.name)}</span></span><span class="cnt">7일 동안 ${s.cum.win.n}회</span></div>`).join('') ||
+    '<span class="small">아직 추천할 만큼 기록이 모이지 않았어요.</span>';
+  if (html !== recoHtml) { $('reco').innerHTML = html; recoHtml = html; }
+  const all = st.all[0].cum.hours[0].map((_, h) => st.all.reduce((a, s) => a + sumHours(s.cum.hours)[h], 0)), w = bestWindow(all);
+  $('recoNote').textContent = `최근 7일의 흡연 의심을 지점마다 2시간씩 묶어서 가장 많았던 시간대를 고르고, 횟수가 많은 순서로 세 곳을 보여 줘요. ${st.all.length}곳을 합치면 ${winText(w)}가 가장 많아요 (${w.n}회). ${isEx() ? '예시 숫자로 계산한 것이라 실제 순찰 계획은 아니에요.' : '센서가 켜져 있던 때만 센 값이라 순찰 계획을 세울 때는 켜 둔 시간도 함께 보세요.'}`;
+}
+
+// 누적 기록 칸: 날짜 막대(누르면 그날) + 시간대 분포
+let cumHtml = '';
+function drawCum(st) {
+  const s = st.all.find((x) => x.id === selected) || st.all[0];
+  if (!s || !s.cum.hours) return;
+  const c = s.cum, max = Math.max(1, ...c.days);
+  const label = (i) => (i === 6 ? '오늘' : new Date(st.now + 9 * 3600e3 - (6 - i) * 86400e3).toISOString().slice(5, 10).replace(/^0/, '').replace('-0', '/').replace('-', '/'));
+  const cols = c.days.map((n, i) => `<button type="button" class="day${i === 6 ? ' today' : ''}${selDay === i ? ' on' : ''}" data-d="${i}" aria-pressed="${selDay === i}" aria-label="${label(i)} ${n}회, 누르면 이날의 시간대 분포">` +
+    `<span>${n}</span><span class="col"><i style="height:${(100 * n / max).toFixed(0)}%"></i></span><span>${label(i)}</span></button>`).join('');
+  const h24 = selDay === null ? sumHours(c.hours) : c.hours[selDay], w = bestWindow(h24), hmax = Math.max(1, ...h24);
+  const hrs = h24.map((n, h) => `<div class="hr${w.n && (h === w.from || h === w.from + 1) ? ' hot' : ''}" title="${h}시 ${n}회"><span class="col">${n ? `<em>${n}</em>` : ''}<i style="height:${(82 * n / hmax).toFixed(0)}%"></i></span><span>${h % 3 === 0 ? h : ''}</span></div>`).join('');
+  const html = `<div class="detail-head"><span class="num big" style="background:${HEX[s.live.state]}">${s.num}</span><h3>${esc(s.name)}</h3></div>
+    <div class="cum-top"><span>흡연 의심 <b>${c.total}</b>회</span><span>오늘 <b>${c.today}</b>회</span><span>${st.all.length}곳 가운데 <b>${s.num}</b>번째</span></div>
+    <p class="small cumsub">날짜별 횟수예요. 막대를 누르면 그날의 시간대 분포가 아래에 나와요.</p>
+    <div class="days">${cols}</div>
+    <div class="chart-l cumsub"><span><b>시간대별 흡연 의심 · ${selDay === null ? '최근 7일 합계' : label(selDay) + ' 하루'}</b></span><span>${w.n ? `가장 많은 시간대 ${winText(w)} (${w.n}회)` : '이날은 흡연 의심이 없었어요'}</span></div>
+    <div class="hours" role="img" aria-label="0시부터 23시까지 시간대별 흡연 의심 횟수 ${h24.join(', ')}">${hrs}</div>
+    <div class="chart-l"><span>0시부터 23시까지 · 진한 막대가 가장 많은 2시간</span>${selDay === null ? '' : '<button type="button" class="allday">7일 합계로 보기</button>'}</div>`;
+  if (html !== cumHtml) { $('cum').innerHTML = html; cumHtml = html; }
 }
 
 function whyText(L) {
@@ -1000,14 +1213,14 @@ function spark(hist, idx, base, th, label) {
 }
 
 function drawDetail(st) {
-  const all = st.sites.concat(st.unplaced || []);
+  const all = st.all;
   const s = all.find((x) => x.id === selected) || all[0];
   const box = $('detail');
   if (!s) { box.innerHTML = '<h2>선택한 지점</h2><p class="why">지점이 없어요.</p>'; return; }
   const L = s.live, run = L.phase === 'run';
   const zone = map ? map.zoneOf(s.id) : null;
   box.innerHTML = `<h2>선택한 지점</h2>
-    <div class="detail-head"><h3>${esc(s.name)}</h3><span class="id">${esc(s.id)}</span>
+    <div class="detail-head"><span class="num big" style="background:${HEX[L.state]}">${s.num}</span><h3>${esc(s.name)}</h3><span class="id">${esc(s.id)}</span>
       <span class="bigstate${chipCls(L.state)}" style="background:${HEX[L.state]}">${STATES[L.state][0]}</span></div>
     <div class="small">${esc(s.place || '')}${L.never ? '' : ` · 마지막 수신 ${kstTime(L.last_at)}${mode === 'example' ? ' (예시 시각)' : ''} · 받은 줄 ${L.n_rx}`}</div>
     <p class="zone">${zone && zone.name ? `흡연 의심이면 이어진 건물 <span class="nw"><b>${esc(zone.name)}</b>${josa(zone.name, '이', '가')}</span> 빨갛게 바뀌어요.` : zone ? '흡연 의심이면 이어진 이름 없는 건물이 빨갛게 바뀌어요.' : '이어진 건물이 없어서 바닥 원만 색이 바뀌어요.'}</p>
@@ -1044,7 +1257,7 @@ function drawLegend() {
 
 function select(id, fly) {
   const changed = id !== selected;
-  selected = id; store('airfaro.sel', id); if (fly && map) map.focus(id); refresh();
+  selected = id; cardClosed = false; selDay = null; store('airfaro.sel', id); if (fly && map) map.focus(id); refresh();
   if (changed && mode === 'real' && !NO_SERVER) pollServer();   // 고른 지점의 그래프 기록을 바로 받아요
 }
 
@@ -1096,7 +1309,21 @@ function init() {
   $('btnHome').onclick = () => map && map.viewHome();
   $('btnTop').onclick = () => map && map.viewTop();
   $('btnSpin').onclick = () => { if (!map) return; const on = !$('btnSpin').classList.contains('on'); $('btnSpin').classList.toggle('on', on); map.setAutoRotate(on); };
-  $('btnStudents').onclick = () => { if (!map) return; const on = !map.studentsOn(); map.setStudents(on); store('airfaro.students', on ? '1' : '0'); showStudents(); };
+  $('btnStudents').onclick = () => { if (!map) return; const on = !map.studentsOn(); map.setStudents(on); store('airfaro.students2', on ? '1' : '0'); showStudents(); };
+  $('btnNames').onclick = () => { store('airfaro.names', store('airfaro.names') === '1' ? '0' : '1'); showNames(); };
+  $('btnJump').onclick = () => $('rankCard').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+  const setSpan = (v) => { rankSpan = v; store('airfaro.span', v); refresh(); };
+  $('spanWeek').onclick = () => setSpan('week'); $('spanToday').onclick = () => setSpan('today');
+  $('list').addEventListener('click', (e) => { const r = e.target.closest('.site-row'); if (r) select(r.dataset.id, true); });
+  $('list').addEventListener('keydown', (e) => { const r = e.target.closest('.site-row'); if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(r.dataset.id, true); } });
+  $('cum').addEventListener('click', (e) => {
+    const d = e.target.closest('button.day');
+    if (d) { const i = +d.dataset.d; selDay = selDay === i ? null : i; refresh(); }
+    else if (e.target.closest('.allday')) { selDay = null; refresh(); }
+  });
+  $('reco').addEventListener('click', (e) => { const r = e.target.closest('.reco-row'); if (r) select(r.dataset.id, true); });
+  $('reco').addEventListener('keydown', (e) => { const r = e.target.closest('.reco-row'); if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(r.dataset.id, true); } });
+  showNames();
   exampleStart();
   setMode('example');
   startMap();

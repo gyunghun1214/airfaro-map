@@ -3465,8 +3465,9 @@
     let VW = 1, VH = 1, compact = false;   // compact: 좁은 지도(휴대폰)에서는 고른 센서만 이름을 보여요
     function refreshLabels() {
       for (const s of sensors.values()) {
-        const showName = !compact || s.site.id === selected;
-        const html = `<b>${esc(s.num)}</b>${showName ? `<span>${esc(s.site.name)}</span>` : ''}<i>${esc(STATE_NAME[s.state] || '')}</i>`;
+        const only = !!opts.numbersOnly && s.site.id !== selected;   // 고르지 않은 센서는 번호만 보여요 (번호 = 흡연 의심 누적 순위)
+        const showName = !only && (!compact || s.site.id === selected);
+        const html = `<b>${esc(s.num)}</b>${showName ? `<span>${esc(s.site.name)}</span>` : ''}${only ? '' : `<i>${esc(STATE_NAME[s.state] || '')}</i>`}`;
         if (s.el.innerHTML !== html) { s.el.innerHTML = html; s.lab.w = 0; s.lab.h = 0; }
         s.el.style.setProperty('--c', STATE_COLOR[s.state] || '#adb5bd');
         s.el.classList.toggle('sel', s.site.id === selected);
